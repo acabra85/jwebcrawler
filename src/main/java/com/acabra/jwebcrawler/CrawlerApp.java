@@ -11,8 +11,10 @@ public class CrawlerApp {
     }
 
     void start(String subDomain) {
-        if (!subDomain.trim().isEmpty()) {
+        if (null != subDomain && !subDomain.trim().isEmpty()) {
             logger.info(String.format("Will attempt crawl for pages of SubDomain :<%s>", subDomain));
+        } else {
+            throw new NullPointerException("Sub-domain not found: expected sub-domain passed as argument.");
         }
     }
 

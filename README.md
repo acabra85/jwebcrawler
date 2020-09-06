@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/acabra85/jwebcrawler.svg?branch=master)](https://travis-ci.org/acabra85/jwebcrawler)
+[![codecov](https://codecov.io/gh/acabra85/jwebcrawler/branch/master/graph/badge.svg)](https://codecov.io/gh/acabra85/jwebcrawler)
+
 # jwebcrawler
 A webcrawler made in java
 
