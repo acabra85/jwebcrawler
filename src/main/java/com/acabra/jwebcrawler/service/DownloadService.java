@@ -14,9 +14,8 @@ public class DownloadService {
 
     private static final Logger logger = LoggerFactory.getLogger(DownloadService.class);
     private final HttpClient client;
-    private final static DownloadService instance = new DownloadService();
 
-    private DownloadService() {
+    public DownloadService() {
         this.client = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(4)).build();
     }
@@ -29,10 +28,6 @@ public class DownloadService {
                     }
                     return res;
                 });
-    }
-
-    public static DownloadService getInstance() {
-        return instance;
     }
 
     /**

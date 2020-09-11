@@ -1,7 +1,7 @@
 package com.acabra.jwebcrawler.control;
 
 
-import com.acabra.jwebcrawler.model.DefaultCrawlerConfiguration;
+import com.acabra.jwebcrawler.dto.DefaultCrawlerConfiguration;
 import com.acabra.jwebcrawler.utils.JsonHelper;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
@@ -12,7 +12,7 @@ public class CrawlerAppBuilderTest {
 
     @Test
     public void should_fail_null_domain_given() {
-        Exception exception = Assertions.assertThrows(NullPointerException.class, () -> CrawlerApp.of(null));
+        Exception exception = Assertions.assertThrows(NullPointerException.class, CrawlerApp::of);
         Assertions.assertTrue(exception.getMessage().startsWith("Sub-domain not found"));
     }
 
@@ -82,7 +82,7 @@ public class CrawlerAppBuilderTest {
 
     @Test
     public void should_have_defaults() {
-        CrawlerApp underTest = CrawlerApp.newBuilder()
+        CrawlerApp underTest = new CrawlerAppBuilder()
                 .withDomain("http://127.0.0.1:8000/").build();
         DefaultCrawlerConfiguration expected = JsonHelper.getInstance().fromJsonFile("config.json", DefaultCrawlerConfiguration.class);
 

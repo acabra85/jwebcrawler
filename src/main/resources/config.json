@@ -1,1 +1,1 @@
-{"workerCount": 4,"sleepTime": 5,"maxExecutionTime": 0,"siteHeight": 5,"maxSiteNodeLinks": 5}
+{"workerCount": 4,"sleepTime": 5,"maxExecutionTime": 0,"siteHeight": 5,"maxSiteNodeLinks": 5, "reportToFile": false}

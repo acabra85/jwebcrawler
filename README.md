@@ -62,5 +62,6 @@ The file ```/src/main/resources/config.json``` contains the defaults for executi
      "maxExecutionTime": 0, // by default there is no limit, in seconds 
      "siteHeight": 5, // how deep to traverse the site-tree
      "maxSiteNodeLinks": 5 // how many maximum children per tree-site-node
+     "reportToFile": false // should print report to a file (by default prints to console) 
    }
 ```

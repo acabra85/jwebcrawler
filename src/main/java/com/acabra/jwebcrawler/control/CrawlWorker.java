@@ -21,9 +21,9 @@ import java.util.stream.Collectors;
 /**
  * Represent the individual worker with the task of downloading the content of the given uri
  */
-public class Worker implements Runnable {
+public class CrawlWorker implements Runnable {
 
-    private static final Logger logger = LoggerFactory.getLogger(Worker.class);
+    private static final Logger logger = LoggerFactory.getLogger(CrawlWorker.class);
     private static final int MAX_BUDGET = 8;
     private static final int EARNED_BUDGET = 2;
     private static final long MAX_CHILD_PER_PAGE = 10;
@@ -42,9 +42,9 @@ public class Worker implements Runnable {
     private DownloadService downloadService;
     private long maxChildPerPage;
 
-    Worker(BlockingQueue<CrawledNode> blockingQ, CrawlerCoordinator coordinator, String siteURI,
-           long sleepTime, ReentrantLock queueLock, boolean stoppable, int maxChildPerPage,
-           int maxSiteHeight, DownloadService downloadService) {
+    CrawlWorker(BlockingQueue<CrawledNode> blockingQ, CrawlerCoordinator coordinator, String siteURI,
+                long sleepTime, ReentrantLock queueLock, boolean stoppable, int maxChildPerPage,
+                int maxSiteHeight, DownloadService downloadService) {
         this.queue = blockingQ;
         this.coordinator = coordinator;
         this.workBudget = MAX_BUDGET;
@@ -57,10 +57,10 @@ public class Worker implements Runnable {
         this.downloadService = downloadService;
     }
 
-    public static Worker of(BlockingQueue<CrawledNode> queue, CrawlerCoordinator coordinator,
-                            String siteURI, long sleepTime, ReentrantLock queueLock, boolean stoppable,
-                            int maxChildPerPage, int maxSiteHeight, DownloadService downloadService) {
-        return new Worker(queue, coordinator, siteURI, sleepTime, queueLock, stoppable, maxChildPerPage,
+    public static CrawlWorker of(BlockingQueue<CrawledNode> queue, CrawlerCoordinator coordinator,
+                                 String siteURI, long sleepTime, ReentrantLock queueLock, boolean stoppable,
+                                 int maxChildPerPage, int maxSiteHeight, DownloadService downloadService) {
+        return new CrawlWorker(queue, coordinator, siteURI, sleepTime, queueLock, stoppable, maxChildPerPage,
                 maxSiteHeight, downloadService);
     }
 
@@ -119,6 +119,7 @@ public class Worker implements Runnable {
         Elements links = Jsoup.parse(htmlResponse, baseUri).select("a");
         return links.stream()
                 .map(element -> element.attr("abs:href"))
+                .filter(link -> link.startsWith(this.siteURI))
                 .filter(allowLink)
                 .limit(this.maxChildPerPage)
                 .distinct()
@@ -154,7 +155,7 @@ public class Worker implements Runnable {
                     }else { return; }
                 }
             } catch (InterruptedException ie) {
-                logger.error("Worker interrupted: " + ie.getMessage());
+                logger.error("CrawlWorker interrupted: " + ie.getMessage());
                 Thread.currentThread().interrupt();
             } finally {
                 if (this.queueLock.isHeldByCurrentThread()) {
@@ -193,7 +194,7 @@ public class Worker implements Runnable {
                 } else { return; }
             }
         } catch (InterruptedException ie) {
-            logger.error("Worker interrupted: " + ie.getMessage());
+            logger.error("CrawlWorker interrupted: " + ie.getMessage());
             Thread.currentThread().interrupt();
         } finally {
             if (this.queueLock.isHeldByCurrentThread()) {

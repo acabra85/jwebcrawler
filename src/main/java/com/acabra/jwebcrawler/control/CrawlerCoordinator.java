@@ -22,12 +22,10 @@ public class CrawlerCoordinator {
     private final ConcurrentHashMap<String, String> redirects = new ConcurrentHashMap<>();
     private final Set<String> failureLinks = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
     private final AtomicInteger ids = new AtomicInteger();
-    private final String base;
     private final Map<Long, Set<CrawledNode>> graph = new HashMap<>();
     private boolean jobDone = false;
 
-    CrawlerCoordinator(String base) {
-        this.base = base;
+    CrawlerCoordinator() {
     }
 
 
@@ -38,8 +36,7 @@ public class CrawlerCoordinator {
      * @return
      */
     public synchronized boolean allowLink(String otherDomain) {
-        return otherDomain.startsWith(this.base)
-                && !visited.contains(otherDomain)
+        return !visited.contains(otherDomain)
                 && !failureLinks.contains(otherDomain);
     }
 

@@ -2,12 +2,23 @@ package com.acabra.jwebcrawler.view;
 
 import com.acabra.jwebcrawler.model.CrawlSiteResponse;
 import com.acabra.jwebcrawler.model.CrawledNode;
-
-import java.util.*;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.Collection;
+import java.util.Map;
+import java.util.Optional;
+import java.util.PriorityQueue;
+import java.util.Stack;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CrawlerReporter {
 
+    private final static Logger logger = LoggerFactory.getLogger(CrawlerReporter.class);
     private static final PriorityQueue<CrawledNode> EMPTY_QUEUE = new PriorityQueue<>();
+    final static String FILE_NAME_TEMPLATE = "CrawlReport-%s-%s.txt"; // e.g. CrawlReport-www.sitename.com-<identifier>.txt
 
     public CrawlerReporter() {
     }
@@ -42,5 +53,39 @@ public class CrawlerReporter {
             return sb.toString();
         }
         return "-- No Nodes Traversed --";
+    }
+
+
+    private static void writeReportToFile(String report, String siteURI) {
+        try {
+            String siteName = buildFileNameFromURI(siteURI);
+            String filePath = String.format(FILE_NAME_TEMPLATE, siteName, System.currentTimeMillis());
+            File resultsFolder = new File("reports");
+            if (!resultsFolder.exists()) resultsFolder.mkdirs();
+            Files.write(Paths.get("reports/"+filePath), report.getBytes());
+        } catch (IOException e) {
+            logger.error("Error while writing the report to file: " + e.getMessage());
+        }
+    }
+
+    public static String buildFileNameFromURI(String fileName) {
+        StringBuilder siteName = new StringBuilder();
+        for (char c : fileName.split("//")[1].toCharArray()) {
+            if ('.' == c || Character.isAlphabetic(c) || Character.isDigit(c)) {
+                siteName.append(c);
+            } else {
+                siteName.append("_");
+            }
+        }
+        return siteName.toString();
+    }
+
+    public static void report(boolean toFile, CrawlSiteResponse siteResponse, String siteURI) {
+        String reportStr = buildReport(siteResponse);
+        if (toFile) {
+            writeReportToFile(reportStr, siteURI);
+        } else {
+            System.out.println(reportStr);
+        }
     }
 }

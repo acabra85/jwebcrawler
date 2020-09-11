@@ -3,6 +3,8 @@ package com.acabra.jwebcrawler.control;
 import com.acabra.jwebcrawler.model.CrawlSiteResponse;
 import com.acabra.jwebcrawler.model.CrawledNode;
 import com.acabra.jwebcrawler.service.DownloadService;
+import com.acabra.jwebcrawler.view.CrawlerReporter;
+import java.io.File;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
@@ -51,6 +53,8 @@ public class CrawlerAppTest {
                 .thenReturn(getFutureResponseOF("site/a8.html"));
         Mockito.when(downloadService.download("http://localhost:8000/a9.html"))
                 .thenReturn(getFutureEmptyResponse());
+        Mockito.when(downloadService.download("http://localhost:8000/a6redirect.html"))
+                .thenReturn(getFutureRedirectResponse());
     }
 
     @Test
@@ -74,12 +78,13 @@ public class CrawlerAppTest {
         Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/a4.html");
         Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/a5.html");
         Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/a6.html");
+        Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/a6redirect.html");
         Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/a7.html");
         Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/a8.html");
         Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/a9.html");
 
         Assertions.assertEquals(crawlSiteResponse.getTotalFailures(), 1);
-        Assertions.assertEquals(crawlSiteResponse.getTotalRedirects(), 0);
+        Assertions.assertEquals(crawlSiteResponse.getTotalRedirects(), 1);
         MatcherAssert.assertThat(calculateActualMaxChildren(graph), Matchers.lessThanOrEqualTo(maxSiteNodeLinks));
         MatcherAssert.assertThat(calculateActualHeight(graph), Matchers.lessThanOrEqualTo(expectedSiteMaxHeight));
     }
@@ -90,7 +95,7 @@ public class CrawlerAppTest {
         int maxSiteNodeLinks = 2;
         CrawlerApp crawlerApp = CrawlerApp.newBuilder()
                 .withDomain("http://localhost:8000/")
-                .withSleepWorkerTime(0.75)
+                .withSleepWorkerTime(0.1)
                 .withWorkerCount(1)
                 .withMaxTreeSiteHeight(expectedSiteMaxHeight)
                 .withMaxSiteNodeLinks(maxSiteNodeLinks)
@@ -122,7 +127,7 @@ public class CrawlerAppTest {
         int maxSiteNodeLinks = 1;
         CrawlerApp crawlerApp = CrawlerApp.newBuilder()
                 .withDomain("http://localhost:8000/")
-                .withSleepWorkerTime(0.75)
+                .withSleepWorkerTime(0.1)
                 .withWorkerCount(1)
                 .withMaxTreeSiteHeight(maxTreeSiteHeight)
                 .withMaxSiteNodeLinks(maxSiteNodeLinks)
@@ -148,6 +153,46 @@ public class CrawlerAppTest {
         MatcherAssert.assertThat(calculateActualHeight(graph), Matchers.lessThanOrEqualTo(maxTreeSiteHeight));
     }
 
+    @Test
+    public void should_build_report_file() {
+        String domain = "http://localhost:8000";
+        CrawlerApp underTest = CrawlerApp.newBuilder()
+                .withDomain(domain)
+                .withWorkerCount(1)
+                .withSleepWorkerTime(0.1)
+                .withReportToFile(true)
+                .build();
+        underTest.start();
+        Assertions.assertTrue(reportFileWasCreated(domain));
+    }
+
+    @Test
+    public void should_not_build_report_file() {
+        String domain = "http://localhost:8000";
+        CrawlerApp underTest = CrawlerApp.newBuilder()
+                .withDomain(domain)
+                .withWorkerCount(1)
+                .withSleepWorkerTime(0.1)
+                .build();
+        underTest.start();
+        Assertions.assertFalse(reportFileWasCreated(domain));
+    }
+
+    private boolean reportFileWasCreated(String domain) {
+        long currentTime = System.currentTimeMillis();
+        File currentFolder = new File(System.getProperty("user.dir") + "/reports");
+        String expectedName = CrawlerReporter.buildFileNameFromURI(domain);
+        if(!currentFolder.exists()) return false;
+        for(File file: currentFolder.listFiles()) {
+            if (file.isFile()
+                    && file.getName().contains("CrawlReport-"+expectedName)
+                    && (currentTime - file.lastModified()) < 500L) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private int calculateActualHeight(Map<Long, PriorityQueue<CrawledNode>> graph) {
         int height = 0;
         Stack<CrawledNode> q = new Stack<>();
@@ -171,6 +216,17 @@ public class CrawlerAppTest {
 
     private CompletableFuture<HttpResponse<String>> getFutureEmptyResponse() {
         return CompletableFuture.completedFuture(notFoundHTMLResponse());
+    }
+
+    private CompletableFuture<HttpResponse<String>> getFutureRedirectResponse() {
+        return CompletableFuture.completedFuture(redirectHTMLResponse());
+    }
+
+    private HttpResponse<String> redirectHTMLResponse() {
+        return buildHttpResponse("", "", 301, Map.of(
+                "content-type", List.of("text/html"),
+                "Location", List.of("/index.html")
+        ));
     }
 
     private HttpResponse<String> notFoundHTMLResponse() {
