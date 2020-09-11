@@ -4,6 +4,8 @@ package com.acabra.jwebcrawler.model;
 import java.util.Objects;
 
 public class CrawledNode {
+    public static final long ROOT_NODE_ID = -1L;
+
     public final String url;
     public final int level;
     public final long id;
@@ -13,7 +15,7 @@ public class CrawledNode {
         this.url = url;
         this.id = id;
         this.level = 0;
-        this.parentId = -1L;
+        this.parentId = ROOT_NODE_ID;
     }
 
     public CrawledNode(String url, long id, int level, long parentId) {

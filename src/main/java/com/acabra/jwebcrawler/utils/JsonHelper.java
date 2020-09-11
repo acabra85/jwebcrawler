@@ -27,14 +27,6 @@ public class JsonHelper {
         return instance;
     }
 
-    public String toJson(Object object) throws JsonProcessingException {
-        return mapper.writeValueAsString(object);
-    }
-
-    public <T> T fromJson(String body, Class<T> clazz) throws IOException {
-        return mapper.readValue(body, clazz);
-    }
-
     public <T> T fromJsonFile(String fileName, Class<T> clazz) {
         try {
             return mapper.readValue(getFileContents(fileName), clazz);

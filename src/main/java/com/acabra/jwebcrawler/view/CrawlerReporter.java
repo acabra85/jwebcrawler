@@ -26,7 +26,7 @@ public class CrawlerReporter {
     public static String buildReport(CrawlSiteResponse siteResponse) {
 
         Map<Long, PriorityQueue<CrawledNode>> graph = siteResponse.getGraph();
-        Optional<CrawledNode> root = graph.getOrDefault(-1L, EMPTY_QUEUE).stream().findFirst();
+        Optional<CrawledNode> root = graph.getOrDefault(CrawledNode.ROOT_NODE_ID, EMPTY_QUEUE).stream().findFirst();
         if (root.isPresent()) {
             CrawledNode rootNode = root.get();
             Stack<CrawledNode> q = new Stack<>();

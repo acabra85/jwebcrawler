@@ -24,6 +24,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 public class CrawlerAppTest {
 
@@ -55,6 +57,12 @@ public class CrawlerAppTest {
                 .thenReturn(getFutureEmptyResponse());
         Mockito.when(downloadService.download("http://localhost:8000/a6redirect.html"))
                 .thenReturn(getFutureRedirectResponse());
+
+        Mockito.when(downloadService.download("http://delayed-website.com"))
+                .thenAnswer((invocationOnMock) -> {
+                    Thread.sleep(5000L);
+                    return getFutureEmptyResponse();
+                });
     }
 
     @Test
@@ -85,6 +93,7 @@ public class CrawlerAppTest {
 
         Assertions.assertEquals(crawlSiteResponse.getTotalFailures(), 1);
         Assertions.assertEquals(crawlSiteResponse.getTotalRedirects(), 1);
+        Assertions.assertTrue(graph.containsKey(CrawledNode.ROOT_NODE_ID));
         MatcherAssert.assertThat(calculateActualMaxChildren(graph), Matchers.lessThanOrEqualTo(maxSiteNodeLinks));
         MatcherAssert.assertThat(calculateActualHeight(graph), Matchers.lessThanOrEqualTo(expectedSiteMaxHeight));
     }
@@ -99,7 +108,6 @@ public class CrawlerAppTest {
                 .withWorkerCount(1)
                 .withMaxTreeSiteHeight(expectedSiteMaxHeight)
                 .withMaxSiteNodeLinks(maxSiteNodeLinks)
-                .withMaxExecutionTime(15)
                 .build();
         CrawlSiteResponse crawlSiteResponse = crawlerApp.crawlSite(downloadService);
         Map<Long, PriorityQueue<CrawledNode>> graph = crawlSiteResponse.getGraph();
@@ -117,6 +125,7 @@ public class CrawlerAppTest {
 
         Assertions.assertEquals(crawlSiteResponse.getTotalFailures(), 0);
         Assertions.assertEquals(crawlSiteResponse.getTotalRedirects(), 0);
+        Assertions.assertTrue(graph.containsKey(CrawledNode.ROOT_NODE_ID));
         MatcherAssert.assertThat(calculateActualMaxChildren(graph), Matchers.lessThanOrEqualTo(maxSiteNodeLinks));
         MatcherAssert.assertThat(calculateActualHeight(graph), Matchers.lessThanOrEqualTo(expectedSiteMaxHeight));
     }
@@ -131,7 +140,6 @@ public class CrawlerAppTest {
                 .withWorkerCount(1)
                 .withMaxTreeSiteHeight(maxTreeSiteHeight)
                 .withMaxSiteNodeLinks(maxSiteNodeLinks)
-                .withMaxExecutionTime(15)
                 .build();
         CrawlSiteResponse crawlSiteResponse = crawlerApp.crawlSite(downloadService);
         Map<Long, PriorityQueue<CrawledNode>> graph = crawlSiteResponse.getGraph();
@@ -149,8 +157,33 @@ public class CrawlerAppTest {
 
         Assertions.assertEquals(crawlSiteResponse.getTotalFailures(), 0);
         Assertions.assertEquals(crawlSiteResponse.getTotalRedirects(), 0);
+        Assertions.assertTrue(graph.containsKey(CrawledNode.ROOT_NODE_ID));
         MatcherAssert.assertThat(calculateActualMaxChildren(graph), Matchers.lessThanOrEqualTo(maxSiteNodeLinks));
         MatcherAssert.assertThat(calculateActualHeight(graph), Matchers.lessThanOrEqualTo(maxTreeSiteHeight));
+    }
+
+    @Test
+    public void should_interrupt_execution() {
+        String domain = "http://delayed-website.com";
+        CrawlerApp underTest = CrawlerApp.newBuilder()
+                .withDomain(domain)
+                .withWorkerCount(1)
+                .withSleepWorkerTime(4)
+                .withMaxExecutionTime(2)
+                .build();
+
+        CrawlSiteResponse actualResponse = underTest.crawlSite(downloadService);
+        Map<Long, PriorityQueue<CrawledNode>> graph = actualResponse.getGraph();
+
+        Mockito.verify(downloadService, Mockito.times(1)).download(domain);
+
+        Assertions.assertEquals(actualResponse.getTotalRedirects(), 0);
+        Assertions.assertEquals(actualResponse.getTotalFailures(), 1);
+        Assertions.assertEquals(graph.size(), 1);
+        Assertions.assertTrue(graph.containsKey(CrawledNode.ROOT_NODE_ID));
+        MatcherAssert.assertThat(Objects.requireNonNull(graph.get(CrawledNode.ROOT_NODE_ID).peek()).url,
+                Matchers.is(domain));
+        Assertions.assertFalse(reportFileWasCreated(domain));
     }
 
     @Test
