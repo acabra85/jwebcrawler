@@ -11,11 +11,11 @@ class CrawlWorkerTest {
     final static String baseUri = "http://mysite.com";
 
     @Test
-    public void should_return_unique_links() {
-        CrawlWorker underTest = CrawlWorker.of(null, null, "", 0L, null, false, 10, 2, null);
+    public void should_return_unique_subdomain_links() {
+        CrawlWorker underTest = CrawlWorker.of(null, null, baseUri, 0L, null, false, 10, 2, null);
         Set<String> expected = Set.of("http://mysite.com/index.html", "http://mysite.com/a5.html",
                 "http://mysite.com/a7.html", "http://mysite.com/a8.html");
-        List<String> actualLinks = underTest.extractLinks(getHtmlWithLinks(), baseUri, (s) -> s.startsWith(baseUri));
+        List<String> actualLinks = underTest.extractLinks(getHtmlWithLinks(), baseUri);
         Assertions.assertEquals(actualLinks.size(), expected.size());
         actualLinks.forEach(link -> Assertions.assertTrue(expected.contains(link), link));
     }

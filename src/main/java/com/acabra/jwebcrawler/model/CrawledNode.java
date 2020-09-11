@@ -4,7 +4,7 @@ package com.acabra.jwebcrawler.model;
 import java.util.Objects;
 
 public class CrawledNode {
-    public static final long ROOT_NODE_ID = -1L;
+    public static final long ROOT_NODE_PARENT_ID = -1L;
 
     public final String url;
     public final int level;
@@ -15,7 +15,7 @@ public class CrawledNode {
         this.url = url;
         this.id = id;
         this.level = 0;
-        this.parentId = ROOT_NODE_ID;
+        this.parentId = ROOT_NODE_PARENT_ID;
     }
 
     public CrawledNode(String url, long id, int level, long parentId) {
@@ -30,11 +30,11 @@ public class CrawledNode {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         CrawledNode that = (CrawledNode) o;
-        return id == that.id;
+        return id == that.id && url.equals(that.url);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id);
+        return Objects.hash(id, url);
     }
 }

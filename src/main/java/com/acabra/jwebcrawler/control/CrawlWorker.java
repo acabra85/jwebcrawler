@@ -91,7 +91,7 @@ public class CrawlWorker implements Runnable {
             int statusCode = httpResponse.statusCode();
             List<String> links = EMPTY_RESPONSE;
             if (statusCode == 200) {
-                links = extractLinks(String.valueOf(httpResponse.body()), siteUri, coordinator::allowLink);
+                links = extractLinks(String.valueOf(httpResponse.body()), siteUri);
             } else if (statusCode == 301 || statusCode == 302) {
                 List<String> location = httpResponse.headers().map().get("Location");
                 if (location!= null && location.size() > 0) {
@@ -115,12 +115,11 @@ public class CrawlWorker implements Runnable {
         return contentTypeHtml.isPresent();
     }
 
-    List<String> extractLinks(String htmlResponse, String baseUri, Predicate<String> allowLink) {
-        Elements links = Jsoup.parse(htmlResponse, baseUri).select("a");
+    List<String> extractLinks(String htmlResponseBody, String baseUri) {
+        Elements links = Jsoup.parse(htmlResponseBody, baseUri).select("a");
         return links.stream()
                 .map(element -> element.attr("abs:href"))
                 .filter(link -> link.startsWith(this.siteURI))
-                .filter(allowLink)
                 .limit(this.maxChildPerPage)
                 .distinct()
                 .collect(Collectors.toList());
@@ -208,9 +207,8 @@ public class CrawlWorker implements Runnable {
         if (pResponse.success) {
             if (pResponse.statusCode == 200) {
                 pResponse.links.forEach(link -> {
-                    if (coordinator.allowLink(link)) {
-                        if (node.level + 1 <= this.maxSiteHeight)
-                            queue.offer(new CrawledNode(link, coordinator.getNextId(), node.level + 1, node.id));
+                    if (allowEnqueue(node, link)) {
+                        queue.offer(new CrawledNode(link, coordinator.getNextId(), node.level + 1, node.id));
                     }
                 });
             } else if (pResponse.statusCode == 301 || pResponse.statusCode == 302) {
@@ -219,15 +217,18 @@ public class CrawlWorker implements Runnable {
                     String newLocation = pResponse.links.get(0);
                     String redirectUri = newLocation.startsWith(this.siteURI) ? newLocation : this.siteURI + newLocation;
                     coordinator.reportRedirect(node.url, redirectUri);
-                    if (coordinator.allowLink(redirectUri)) {
-                        if (node.level + 1 <= this.maxSiteHeight)
-                            queue.offer(new CrawledNode(redirectUri, coordinator.getNextId(), node.level, node.parentId));
+                    if (allowEnqueue(node, redirectUri)) {
+                        queue.offer(new CrawledNode(redirectUri, coordinator.getNextId(), node.level, node.parentId));
                     }
                 }
             } else {
                 coordinator.reportFailureLink(node.url);
             }
         }
+    }
+
+    private boolean allowEnqueue(CrawledNode node, String link) {
+        return coordinator.allowLink(link) && node.level + 1 <= this.maxSiteHeight;
     }
 
     private void taskCompletedAwardBudget() {

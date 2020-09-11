@@ -24,8 +24,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 public class CrawlerAppTest {
 
@@ -57,7 +55,10 @@ public class CrawlerAppTest {
                 .thenReturn(getFutureEmptyResponse());
         Mockito.when(downloadService.download("http://localhost:8000/a6redirect.html"))
                 .thenReturn(getFutureRedirectResponse());
-
+        Mockito.when(downloadService.download("http://localhost:8000/a6redirect.html"))
+                .thenReturn(getFutureRedirectResponse());
+        Mockito.when(downloadService.download("http://localhost:8000/mypfdfile.pdf"))
+                .thenReturn(getFuturePDFResponse());
         Mockito.when(downloadService.download("http://delayed-website.com"))
                 .thenAnswer((invocationOnMock) -> {
                     Thread.sleep(5000L);
@@ -83,17 +84,17 @@ public class CrawlerAppTest {
         Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/index.html");
         Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/a2.html");
         Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/a3.html");
-        Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/a4.html");
+        Mockito.verify(downloadService, Mockito.times(0)).download("http://localhost:8000/a4.html");
         Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/a5.html");
         Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/a6.html");
         Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/a6redirect.html");
-        Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/a7.html");
-        Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/a8.html");
-        Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/a9.html");
+        Mockito.verify(downloadService, Mockito.times(0)).download("http://localhost:8000/a7.html");
+        Mockito.verify(downloadService, Mockito.times(0)).download("http://localhost:8000/a8.html");
+        Mockito.verify(downloadService, Mockito.times(0)).download("http://localhost:8000/a9.html");
 
         Assertions.assertEquals(crawlSiteResponse.getTotalFailures(), 1);
         Assertions.assertEquals(crawlSiteResponse.getTotalRedirects(), 1);
-        Assertions.assertTrue(graph.containsKey(CrawledNode.ROOT_NODE_ID));
+        Assertions.assertTrue(graph.containsKey(CrawledNode.ROOT_NODE_PARENT_ID));
         MatcherAssert.assertThat(calculateActualMaxChildren(graph), Matchers.lessThanOrEqualTo(maxSiteNodeLinks));
         MatcherAssert.assertThat(calculateActualHeight(graph), Matchers.lessThanOrEqualTo(expectedSiteMaxHeight));
     }
@@ -125,7 +126,7 @@ public class CrawlerAppTest {
 
         Assertions.assertEquals(crawlSiteResponse.getTotalFailures(), 0);
         Assertions.assertEquals(crawlSiteResponse.getTotalRedirects(), 0);
-        Assertions.assertTrue(graph.containsKey(CrawledNode.ROOT_NODE_ID));
+        Assertions.assertTrue(graph.containsKey(CrawledNode.ROOT_NODE_PARENT_ID));
         MatcherAssert.assertThat(calculateActualMaxChildren(graph), Matchers.lessThanOrEqualTo(maxSiteNodeLinks));
         MatcherAssert.assertThat(calculateActualHeight(graph), Matchers.lessThanOrEqualTo(expectedSiteMaxHeight));
     }
@@ -146,7 +147,7 @@ public class CrawlerAppTest {
 
         Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/");
         Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/a2.html");
-        Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/a3.html");
+        Mockito.verify(downloadService, Mockito.times(0)).download("http://localhost:8000/a3.html");
         Mockito.verify(downloadService, Mockito.times(0)).download("http://localhost:8000/a4.html");
         Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/index.html");
         Mockito.verify(downloadService, Mockito.times(0)).download("http://localhost:8000/a5.html");
@@ -157,7 +158,7 @@ public class CrawlerAppTest {
 
         Assertions.assertEquals(crawlSiteResponse.getTotalFailures(), 0);
         Assertions.assertEquals(crawlSiteResponse.getTotalRedirects(), 0);
-        Assertions.assertTrue(graph.containsKey(CrawledNode.ROOT_NODE_ID));
+        Assertions.assertTrue(graph.containsKey(CrawledNode.ROOT_NODE_PARENT_ID));
         MatcherAssert.assertThat(calculateActualMaxChildren(graph), Matchers.lessThanOrEqualTo(maxSiteNodeLinks));
         MatcherAssert.assertThat(calculateActualHeight(graph), Matchers.lessThanOrEqualTo(maxTreeSiteHeight));
     }
@@ -168,20 +169,24 @@ public class CrawlerAppTest {
         CrawlerApp underTest = CrawlerApp.newBuilder()
                 .withDomain(domain)
                 .withWorkerCount(1)
-                .withSleepWorkerTime(4)
+                .withSleepWorkerTime(3)
                 .withMaxExecutionTime(2)
                 .build();
 
         CrawlSiteResponse actualResponse = underTest.crawlSite(downloadService);
         Map<Long, PriorityQueue<CrawledNode>> graph = actualResponse.getGraph();
 
+        CrawledNode expectedRootNode = new CrawledNode(domain, 0L);
+
         Mockito.verify(downloadService, Mockito.times(1)).download(domain);
 
         Assertions.assertEquals(actualResponse.getTotalRedirects(), 0);
         Assertions.assertEquals(actualResponse.getTotalFailures(), 1);
+        MatcherAssert.assertThat(actualResponse.getTotalTime(), Matchers.lessThanOrEqualTo(6.0));
         Assertions.assertEquals(graph.size(), 1);
-        Assertions.assertTrue(graph.containsKey(CrawledNode.ROOT_NODE_ID));
-        MatcherAssert.assertThat(Objects.requireNonNull(graph.get(CrawledNode.ROOT_NODE_ID).peek()).url,
+        Assertions.assertTrue(graph.containsKey(CrawledNode.ROOT_NODE_PARENT_ID));
+        MatcherAssert.assertThat(graph.get(CrawledNode.ROOT_NODE_PARENT_ID), Matchers.contains(expectedRootNode));
+        MatcherAssert.assertThat(Objects.requireNonNull(graph.get(CrawledNode.ROOT_NODE_PARENT_ID).peek()).url,
                 Matchers.is(domain));
         Assertions.assertFalse(reportFileWasCreated(domain));
     }
@@ -258,8 +263,16 @@ public class CrawlerAppTest {
     private HttpResponse<String> redirectHTMLResponse() {
         return buildHttpResponse("", "", 301, Map.of(
                 "content-type", List.of("text/html"),
-                "Location", List.of("/index.html")
+                "Location", List.of("/mypfdfile.pdf")
         ));
+    }
+
+    private CompletableFuture<HttpResponse<String>> getFuturePDFResponse() {
+        return CompletableFuture.completedFuture(successPDFResponse());
+    }
+
+    private HttpResponse<String> successPDFResponse() {
+        return buildHttpResponse("", "", 200, Map.of("content-type", List.of("application/pdf")));
     }
 
     private HttpResponse<String> notFoundHTMLResponse() {

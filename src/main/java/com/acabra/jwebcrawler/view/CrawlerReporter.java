@@ -16,17 +16,20 @@ import org.slf4j.LoggerFactory;
 
 public class CrawlerReporter {
 
-    private final static Logger logger = LoggerFactory.getLogger(CrawlerReporter.class);
-    private static final PriorityQueue<CrawledNode> EMPTY_QUEUE = new PriorityQueue<>();
-    final static String FILE_NAME_TEMPLATE = "CrawlReport-%s-%s.txt"; // e.g. CrawlReport-www.sitename.com-<identifier>.txt
 
-    public CrawlerReporter() {
-    }
+    static final String EMPTY_REPORT_CONTENT = "-- No Nodes Traversed --";
+    private static final Logger logger = LoggerFactory.getLogger(CrawlerReporter.class);
+    private static final PriorityQueue<CrawledNode> EMPTY_QUEUE = new PriorityQueue<>();
+    static final String FILE_NAME_TEMPLATE = "CrawlReport-%s-%s.txt"; // e.g. CrawlReport-www.sitename.com-<identifier>.txt
+    static final String RESULTS_HEADER_TEMPLATE = "\n\n---- Results for [%s] ----\n";
+    static final String SITE_MAP_HEADER = "\n---------- Site Map ---------------\n";
+
+    private CrawlerReporter() {}
 
     public static String buildReport(CrawlSiteResponse siteResponse) {
 
         Map<Long, PriorityQueue<CrawledNode>> graph = siteResponse.getGraph();
-        Optional<CrawledNode> root = graph.getOrDefault(CrawledNode.ROOT_NODE_ID, EMPTY_QUEUE).stream().findFirst();
+        Optional<CrawledNode> root = graph.getOrDefault(CrawledNode.ROOT_NODE_PARENT_ID, EMPTY_QUEUE).stream().findFirst();
         if (root.isPresent()) {
             CrawledNode rootNode = root.get();
             Stack<CrawledNode> q = new Stack<>();
@@ -34,13 +37,13 @@ public class CrawlerReporter {
 
             int totalLinks = graph.values().stream().mapToInt(Collection::size).sum();
 
-            StringBuilder sb = new StringBuilder(String.format("\n\n---- Results for [%s] ----\n", rootNode.url))
+            StringBuilder sb = new StringBuilder(String.format(RESULTS_HEADER_TEMPLATE, rootNode.url))
                 .append("\nTotal Pages crawled :").append(graph.keySet().size())
                 .append("\nTotal Links Discovered: ").append(totalLinks)
                 .append("\nTotal Links not downloadable due reporting failures: ").append(siteResponse.getTotalFailures())
                 .append("\nTotal Links redirected: ").append(siteResponse.getTotalRedirects())
                 .append(String.format("\nTotal time taken: %.3f seconds.\n", siteResponse.totalTime))
-                .append("\n---------- Site Map ---------------\n");
+                .append(SITE_MAP_HEADER);
             while (q.size()>0) {
                 CrawledNode pop = q.pop();
                 sb.append(String.format("%s%s\n", "---".repeat(pop.level), pop.url));
@@ -52,7 +55,7 @@ public class CrawlerReporter {
             sb.append("\n-----------------------------------\n");
             return sb.toString();
         }
-        return "-- No Nodes Traversed --";
+        return EMPTY_REPORT_CONTENT;
     }
 
 
