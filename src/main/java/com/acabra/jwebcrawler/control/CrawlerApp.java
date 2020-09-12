@@ -1,36 +1,35 @@
 package com.acabra.jwebcrawler.control;
 
+import com.acabra.jwebcrawler.model.CrawlSiteResponse;
+import com.acabra.jwebcrawler.model.CrawledNode;
 import com.acabra.jwebcrawler.model.CrawlerAppConfig;
 import com.acabra.jwebcrawler.service.DownloadService;
 import com.acabra.jwebcrawler.view.CrawlerReporter;
-import com.acabra.jwebcrawler.model.CrawlSiteResponse;
-import com.acabra.jwebcrawler.model.CrawledNode;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.IntStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CrawlerApp {
 
     private final Logger logger = LoggerFactory.getLogger(CrawlerApp.class);
-    private final String siteURI;
     private final long startedAt = System.currentTimeMillis();
     private final CrawlerAppConfig config;
 
     CrawlerApp(CrawlerAppConfig config) {
-        this.siteURI = config.siteUri;
         this.config = config;
+        logger.info("Given Configuration :" + config.toString());
     }
 
     public static CrawlerApp of(String... args) {
-        return new CrawlerAppBuilder().of(args).build();
-    }
-
-    public static CrawlerAppBuilder newBuilder() {
-        return new CrawlerAppBuilder();
+        return new CrawlerApp(CrawlerAppConfigBuilder.newBuilder(args).build());
     }
 
     private void evaluateTimeout(CrawlerCoordinator coordinator) {
@@ -46,7 +45,7 @@ public class CrawlerApp {
     }
 
     protected CrawlSiteResponse crawlSite(DownloadService downloadService) {
-        logger.info(String.format("Will attempt crawl for pages of SubDomain :<%s>", this.siteURI));
+        logger.info(String.format("Will attempt crawl for pages of SubDomain :<%s>", this.config.siteURI));
 
         BlockingQueue<CrawledNode> queue = new LinkedBlockingQueue<>();
 
@@ -68,48 +67,27 @@ public class CrawlerApp {
         CompletableFuture.allOf(completableFutures).join();
         executorService.shutdown();
         double totalRunningInSeconds = (System.currentTimeMillis() - this.startedAt) / 1000.0d;
-        return new CrawlSiteResponse(coordinator.getGraph(), coordinator.getTotalRedirects(), coordinator.getTotalFailures(),
+        return new CrawlSiteResponse(this.config.siteURI, coordinator.getGraph(),
+                coordinator.getTotalRedirects(),
+                coordinator.getTotalFailures(),
                 totalRunningInSeconds);
     }
 
-    private List<Runnable> buildTasks(BlockingQueue<CrawledNode> queue, ReentrantLock queueLock, CrawlerCoordinator coordinator, DownloadService downloadService) {
+    private List<Runnable> buildTasks(BlockingQueue<CrawledNode> queue, ReentrantLock queueLock,
+                                      CrawlerCoordinator coordinator, DownloadService downloadService) {
         List<Runnable> tasks = new ArrayList<>();
         IntStream.range(0, this.config.workerCount).forEach(i ->
-                tasks.add(CrawlWorker.of(queue, coordinator,
-                        this.siteURI,
-                        config.sleepTime,
-                        queueLock,
-                        this.config.isStoppable,
-                        this.config.maxChildLinks,
-                        this.config.siteHeight,
-                        downloadService))
+                tasks.add(new CrawlWorker(queue, coordinator, queueLock, downloadService, this.config))
         );
         return tasks;
     }
 
     public void start() {
         CrawlSiteResponse siteResponse = crawlSite(new DownloadService());
-        CrawlerReporter.report(this.config.reportToFile, siteResponse, this.siteURI);
+        CrawlerReporter.report(this.config.reportToFile, siteResponse, this.config.siteURI);
     }
 
-    public int getRequestedThreads() {
-        return this.config.workerCount;
+    public CrawlerAppConfig getConfig() {
+        return this.config;
     }
-
-    public long getThreadSleepTime() {
-        return this.config.sleepTime;
-    }
-
-    public int getMaxChildren() {
-        return this.config.maxChildLinks;
-    }
-
-    public int getMaxSiteHeight() {
-        return this.config.siteHeight;
-    }
-
-    public long getMaxExecutionTime() {
-        return this.config.timeout;
-    }
-
 }

@@ -12,18 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import javax.net.ssl.SSLSession;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpHeaders;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 
 public class CrawlerAppTest {
 
@@ -34,35 +23,33 @@ public class CrawlerAppTest {
     @BeforeEach
     public void setup(){
         Mockito.when(downloadService.download("http://localhost:8000/"))
-                .thenReturn(getFutureResponseOF("site/index.html"));
+                .thenReturn(TestUtils.getFutureResponseOF("site/index.html"));
         Mockito.when(downloadService.download("http://localhost:8000/index.html"))
-                .thenReturn(getFutureResponseOF("site/index.html"));
+                .thenReturn(TestUtils.getFutureResponseOF("site/index.html"));
         Mockito.when(downloadService.download("http://localhost:8000/a2.html"))
-                .thenReturn(getFutureResponseOF("site/a2.html"));
+                .thenReturn(TestUtils.getFutureResponseOF("site/a2.html"));
         Mockito.when(downloadService.download("http://localhost:8000/a3.html"))
-                .thenReturn(getFutureResponseOF("site/a3.html"));
+                .thenReturn(TestUtils.getFutureResponseOF("site/a3.html"));
         Mockito.when(downloadService.download("http://localhost:8000/a4.html"))
-                .thenReturn(getFutureResponseOF("site/a4.html"));
+                .thenReturn(TestUtils.getFutureResponseOF("site/a4.html"));
         Mockito.when(downloadService.download("http://localhost:8000/a5.html"))
-                .thenReturn(getFutureResponseOF("site/a5.html"));
+                .thenReturn(TestUtils.getFutureResponseOF("site/a5.html"));
         Mockito.when(downloadService.download("http://localhost:8000/a6.html"))
-                .thenReturn(getFutureResponseOF("site/a6.html"));
+                .thenReturn(TestUtils.getFutureResponseOF("site/a6.html"));
         Mockito.when(downloadService.download("http://localhost:8000/a7.html"))
-                .thenReturn(getFutureResponseOF("site/a7.html"));
+                .thenReturn(TestUtils.getFutureResponseOF("site/a7.html"));
         Mockito.when(downloadService.download("http://localhost:8000/a8.html"))
-                .thenReturn(getFutureResponseOF("site/a8.html"));
+                .thenReturn(TestUtils.getFutureResponseOF("site/a8.html"));
         Mockito.when(downloadService.download("http://localhost:8000/a9.html"))
-                .thenReturn(getFutureEmptyResponse());
+                .thenReturn(TestUtils.getFutureEmptyResponse());
         Mockito.when(downloadService.download("http://localhost:8000/a6redirect.html"))
-                .thenReturn(getFutureRedirectResponse());
-        Mockito.when(downloadService.download("http://localhost:8000/a6redirect.html"))
-                .thenReturn(getFutureRedirectResponse());
-        Mockito.when(downloadService.download("http://localhost:8000/mypfdfile.pdf"))
-                .thenReturn(getFuturePDFResponse());
+                .thenReturn(TestUtils.getFutureRedirectResponse());
+        Mockito.when(downloadService.download("http://localhost:8000/mypdffile.pdf"))
+                .thenReturn(TestUtils.getFuturePDFResponse());
         Mockito.when(downloadService.download("http://delayed-website.com"))
                 .thenAnswer((invocationOnMock) -> {
                     Thread.sleep(5000L);
-                    return getFutureEmptyResponse();
+                    return TestUtils.getFutureEmptyResponse();
                 });
     }
 
@@ -70,13 +57,12 @@ public class CrawlerAppTest {
     public void crawl_site_test() {
         int expectedSiteMaxHeight = 6;
         int maxSiteNodeLinks = 2;
-        CrawlerApp crawlerApp = CrawlerApp.newBuilder()
-                .withDomain("http://localhost:8000/")
+        CrawlerApp crawlerApp = new CrawlerApp(CrawlerAppConfigBuilder.newBuilder("http://localhost:8000/")
                 .withSleepWorkerTime(0.1)
                 .withWorkerCount(4)
                 .withMaxTreeSiteHeight(expectedSiteMaxHeight)
                 .withMaxSiteNodeLinks(maxSiteNodeLinks)
-                .build();
+                .build());
         CrawlSiteResponse crawlSiteResponse = crawlerApp.crawlSite(downloadService);
         Map<Long, PriorityQueue<CrawledNode>> graph = crawlSiteResponse.getGraph();
 
@@ -103,13 +89,12 @@ public class CrawlerAppTest {
     public void crawl_site_with_timeout_test() {
         int expectedSiteMaxHeight = 2;
         int maxSiteNodeLinks = 2;
-        CrawlerApp crawlerApp = CrawlerApp.newBuilder()
-                .withDomain("http://localhost:8000/")
+        CrawlerApp crawlerApp = new CrawlerApp(CrawlerAppConfigBuilder.newBuilder("http://localhost:8000/")
                 .withSleepWorkerTime(0.1)
                 .withWorkerCount(1)
                 .withMaxTreeSiteHeight(expectedSiteMaxHeight)
                 .withMaxSiteNodeLinks(maxSiteNodeLinks)
-                .build();
+                .build());
         CrawlSiteResponse crawlSiteResponse = crawlerApp.crawlSite(downloadService);
         Map<Long, PriorityQueue<CrawledNode>> graph = crawlSiteResponse.getGraph();
 
@@ -135,13 +120,12 @@ public class CrawlerAppTest {
     public void crawl_site_with_max_1_child_test() {
         int maxTreeSiteHeight = 3;
         int maxSiteNodeLinks = 1;
-        CrawlerApp crawlerApp = CrawlerApp.newBuilder()
-                .withDomain("http://localhost:8000/")
+        CrawlerApp crawlerApp = new CrawlerApp(CrawlerAppConfigBuilder.newBuilder("http://localhost:8000/")
                 .withSleepWorkerTime(0.1)
                 .withWorkerCount(1)
                 .withMaxTreeSiteHeight(maxTreeSiteHeight)
                 .withMaxSiteNodeLinks(maxSiteNodeLinks)
-                .build();
+                .build());
         CrawlSiteResponse crawlSiteResponse = crawlerApp.crawlSite(downloadService);
         Map<Long, PriorityQueue<CrawledNode>> graph = crawlSiteResponse.getGraph();
 
@@ -166,12 +150,11 @@ public class CrawlerAppTest {
     @Test
     public void should_interrupt_execution() {
         String domain = "http://delayed-website.com";
-        CrawlerApp underTest = CrawlerApp.newBuilder()
-                .withDomain(domain)
+        CrawlerApp underTest = new CrawlerApp(CrawlerAppConfigBuilder.newBuilder(domain)
                 .withWorkerCount(1)
                 .withSleepWorkerTime(3)
                 .withMaxExecutionTime(2)
-                .build();
+                .build());
 
         CrawlSiteResponse actualResponse = underTest.crawlSite(downloadService);
         Map<Long, PriorityQueue<CrawledNode>> graph = actualResponse.getGraph();
@@ -194,12 +177,11 @@ public class CrawlerAppTest {
     @Test
     public void should_build_report_file() {
         String domain = "http://localhost:8000";
-        CrawlerApp underTest = CrawlerApp.newBuilder()
-                .withDomain(domain)
+        CrawlerApp underTest = new CrawlerApp(CrawlerAppConfigBuilder.newBuilder(domain)
                 .withWorkerCount(1)
                 .withSleepWorkerTime(0.1)
                 .withReportToFile(true)
-                .build();
+                .build());
         underTest.start();
         Assertions.assertTrue(reportFileWasCreated(domain));
     }
@@ -207,11 +189,10 @@ public class CrawlerAppTest {
     @Test
     public void should_not_build_report_file() {
         String domain = "http://localhost:8000";
-        CrawlerApp underTest = CrawlerApp.newBuilder()
-                .withDomain(domain)
+        CrawlerApp underTest = new CrawlerApp(CrawlerAppConfigBuilder.newBuilder(domain)
                 .withWorkerCount(1)
                 .withSleepWorkerTime(0.1)
-                .build();
+                .build());
         underTest.start();
         Assertions.assertFalse(reportFileWasCreated(domain));
     }
@@ -246,68 +227,5 @@ public class CrawlerAppTest {
 
     private int calculateActualMaxChildren(Map<Long, PriorityQueue<CrawledNode>> graph) {
         return graph.values().stream().mapToInt(Collection::size).max().orElse(0);
-    }
-
-    private CompletableFuture<HttpResponse<String>> getFutureResponseOF(String fileName) {
-        return CompletableFuture.completedFuture(successHTMLResponseOf(getResourceAsText(fileName)));
-    }
-
-    private CompletableFuture<HttpResponse<String>> getFutureEmptyResponse() {
-        return CompletableFuture.completedFuture(notFoundHTMLResponse());
-    }
-
-    private CompletableFuture<HttpResponse<String>> getFutureRedirectResponse() {
-        return CompletableFuture.completedFuture(redirectHTMLResponse());
-    }
-
-    private HttpResponse<String> redirectHTMLResponse() {
-        return buildHttpResponse("", "", 301, Map.of(
-                "content-type", List.of("text/html"),
-                "Location", List.of("/mypfdfile.pdf")
-        ));
-    }
-
-    private CompletableFuture<HttpResponse<String>> getFuturePDFResponse() {
-        return CompletableFuture.completedFuture(successPDFResponse());
-    }
-
-    private HttpResponse<String> successPDFResponse() {
-        return buildHttpResponse("", "", 200, Map.of("content-type", List.of("application/pdf")));
-    }
-
-    private HttpResponse<String> notFoundHTMLResponse() {
-        return buildHttpResponse("", "", 404, Map.of("content-type", List.of("text/html")));
-    }
-
-    private String getResourceAsText(String fileName) {
-        StringBuilder sb = new StringBuilder();
-        InputStream inputStream = CrawlerAppTest.class.getClassLoader().getResourceAsStream(fileName);
-        try(BufferedReader br = new BufferedReader(new InputStreamReader(inputStream))) {
-            String line = null;
-            while((line = br.readLine())!=null) {
-                sb.append(line).append("\n");
-            }
-            return sb.toString();
-        } catch (IOException ioe) {
-            System.out.println(ioe.getMessage());
-        }
-        return "";
-    }
-
-    private HttpResponse<String> successHTMLResponseOf(String body) {
-        return buildHttpResponse("", body, 200, Map.of("content-type", List.of("text/html")));
-    }
-
-    public HttpResponse<String> buildHttpResponse(String uri, String body, int statusCode, Map<String, List<String>> headers) {
-        return new HttpResponse<>() {
-            @Override public int statusCode() { return statusCode;}
-            @Override public HttpRequest request() { return null;}
-            @Override public Optional<HttpResponse<String>> previousResponse() { return Optional.empty();}
-            @Override public HttpHeaders headers() { return HttpHeaders.of(headers, (s, s2) -> true);}
-            @Override public String body() { return body;}
-            @Override public Optional<SSLSession> sslSession() { return Optional.empty();}
-            @Override public URI uri() { return URI.create(uri);}
-            @Override public HttpClient.Version version() { return HttpClient.Version.HTTP_2;}
-        };
     }
 }

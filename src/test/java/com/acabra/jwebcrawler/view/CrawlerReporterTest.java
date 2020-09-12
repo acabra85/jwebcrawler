@@ -19,14 +19,14 @@ class CrawlerReporterTest {
     @Test
     public void should_build_empty_report() {
         String actualReport = CrawlerReporter.buildReport(
-                new CrawlSiteResponse(Collections.emptyMap(), 0, 0, 0.5));
+                new CrawlSiteResponse(SUB_DOMAIN, Collections.emptyMap(), 0, 0, 0.5));
         Assertions.assertEquals(actualReport, CrawlerReporter.EMPTY_REPORT_CONTENT);
     }
 
     @Test
     public void should_build_non_empty_report() {
         Map<Long, PriorityQueue<CrawledNode>> graph = buildGraph();
-        String actualReport = CrawlerReporter.buildReport(new CrawlSiteResponse(graph, 0, 0, 0.5));
+        String actualReport = CrawlerReporter.buildReport(new CrawlSiteResponse(SUB_DOMAIN, graph, 0, 0, 0.5));
         Assertions.assertTrue(actualReport.contains(CrawlerReporter.SITE_MAP_HEADER));
         Assertions.assertTrue(actualReport.contains(SUB_DOMAIN));
         Assertions.assertTrue(actualReport.contains("page.html"));

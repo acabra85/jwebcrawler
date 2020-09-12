@@ -9,9 +9,11 @@ public class CrawlSiteResponse {
     final int totalRedirects;
     final int totalFailures;
     final public double totalTime;
+    public final String siteURI;
 
-    public CrawlSiteResponse(Map<Long, PriorityQueue<CrawledNode>> graph, int totalRedirects, int totalFailures,
-                             double totalTime) {
+    public CrawlSiteResponse(String siteURI, Map<Long, PriorityQueue<CrawledNode>> graph, int totalRedirects,
+                             int totalFailures, double totalTime) {
+        this.siteURI = siteURI;
         this.graph = graph;
         this.totalRedirects = totalRedirects;
         this.totalFailures = totalFailures;

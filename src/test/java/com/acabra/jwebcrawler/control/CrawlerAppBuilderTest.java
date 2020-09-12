@@ -42,54 +42,120 @@ public class CrawlerAppBuilderTest {
 
     @Test
     public void should_pass_valid_arguments_1() {
-        CrawlerApp app = CrawlerApp.of("http://127.0.0.1:8000/");
-        MatcherAssert.assertThat(app, Matchers.notNullValue());
-        MatcherAssert.assertThat(app.getRequestedThreads(), Matchers.is(Integer.MAX_VALUE));
-        MatcherAssert.assertThat(app.getThreadSleepTime(), Matchers.is(1000L));
+        CrawlerApp underTest = CrawlerApp.of("http://127.0.0.1:8000/");
+        MatcherAssert.assertThat(underTest, Matchers.notNullValue());
+        MatcherAssert.assertThat(underTest.getConfig().workerCount, Matchers.is(1));
+        MatcherAssert.assertThat(underTest.getConfig().sleepTime, Matchers.is(1000L));
+        MatcherAssert.assertThat(underTest.getConfig().timeout, Matchers.is(0L));
+        MatcherAssert.assertThat(underTest.getConfig().maxChildLinks, Matchers.is(10));
+        MatcherAssert.assertThat(underTest.getConfig().siteHeight, Matchers.is(6));
+        MatcherAssert.assertThat(underTest.getConfig().siteURI, Matchers.is("http://127.0.0.1:8000"));
+        MatcherAssert.assertThat(underTest.getConfig().reportToFile, Matchers.is(false));
     }
 
     @Test
     public void should_pass_valid_arguments_2() {
-        CrawlerApp app = CrawlerApp.of("http://127.0.0.1:8000/", "3");
-        MatcherAssert.assertThat(app, Matchers.notNullValue());
-        MatcherAssert.assertThat(app.getRequestedThreads(), Matchers.is(3));
-        MatcherAssert.assertThat(app.getThreadSleepTime(), Matchers.is(1000L));
+        CrawlerApp underTest = CrawlerApp.of("http://127.0.0.1:8000/", "3");
+        MatcherAssert.assertThat(underTest, Matchers.notNullValue());
+        MatcherAssert.assertThat(underTest.getConfig().workerCount, Matchers.is(3));
+        MatcherAssert.assertThat(underTest.getConfig().sleepTime, Matchers.is(1000L));
+        MatcherAssert.assertThat(underTest.getConfig().timeout, Matchers.is(0L));
+        MatcherAssert.assertThat(underTest.getConfig().maxChildLinks, Matchers.is(10));
+        MatcherAssert.assertThat(underTest.getConfig().siteHeight, Matchers.is(6));
+        MatcherAssert.assertThat(underTest.getConfig().siteURI, Matchers.is("http://127.0.0.1:8000"));
+        MatcherAssert.assertThat(underTest.getConfig().reportToFile, Matchers.is(false));
     }
 
     @Test
     public void should_pass_valid_arguments_3() {
-        CrawlerApp app = CrawlerApp.of("http://127.0.0.1:8000/", "3", "1.5");
-        MatcherAssert.assertThat(app, Matchers.notNullValue());
-        MatcherAssert.assertThat(app.getRequestedThreads(), Matchers.is(3));
-        MatcherAssert.assertThat(app.getThreadSleepTime(), Matchers.is(1500L));
+        CrawlerApp underTest = CrawlerApp.of("http://127.0.0.1:8000/", "3", "1.5");
+        MatcherAssert.assertThat(underTest, Matchers.notNullValue());
+        MatcherAssert.assertThat(underTest.getConfig().workerCount, Matchers.is(3));
+        MatcherAssert.assertThat(underTest.getConfig().sleepTime, Matchers.is(1500L));
+        MatcherAssert.assertThat(underTest.getConfig().timeout, Matchers.is(0L));
+        MatcherAssert.assertThat(underTest.getConfig().maxChildLinks, Matchers.is(10));
+        MatcherAssert.assertThat(underTest.getConfig().siteHeight, Matchers.is(6));
+        MatcherAssert.assertThat(underTest.getConfig().siteURI, Matchers.is("http://127.0.0.1:8000"));
+        MatcherAssert.assertThat(underTest.getConfig().reportToFile, Matchers.is(false));
     }
 
     @Test
     public void should_pass_valid_arguments_3_number_threads_adjusted() {
-        CrawlerApp app = CrawlerApp.of("http://127.0.0.1:8000/", "-1");
-        MatcherAssert.assertThat(app, Matchers.notNullValue());
-        MatcherAssert.assertThat(app.getRequestedThreads(), Matchers.is(1));
-        MatcherAssert.assertThat(app.getThreadSleepTime(), Matchers.is(1000L));
+        CrawlerApp underTest = CrawlerApp.of("http://127.0.0.1:8000/", "-1");
+        MatcherAssert.assertThat(underTest, Matchers.notNullValue());
+        MatcherAssert.assertThat(underTest.getConfig().workerCount, Matchers.is(1));
+        MatcherAssert.assertThat(underTest.getConfig().sleepTime, Matchers.is(1000L));
+        MatcherAssert.assertThat(underTest.getConfig().timeout, Matchers.is(0L));
+        MatcherAssert.assertThat(underTest.getConfig().maxChildLinks, Matchers.is(10));
+        MatcherAssert.assertThat(underTest.getConfig().siteHeight, Matchers.is(6));
+        MatcherAssert.assertThat(underTest.getConfig().siteURI, Matchers.is("http://127.0.0.1:8000"));
+        MatcherAssert.assertThat(underTest.getConfig().reportToFile, Matchers.is(false));
     }
 
     @Test
     public void should_pass_valid_arguments_4_sleep_thread_time_adjusted() {
-        CrawlerApp app = CrawlerApp.of("http://127.0.0.1:8000/", "4", "11000");
-        MatcherAssert.assertThat(app, Matchers.notNullValue());
-        MatcherAssert.assertThat(app.getRequestedThreads(), Matchers.is(4));
-        MatcherAssert.assertThat(app.getThreadSleepTime(), Matchers.is(10000L));
+        CrawlerApp underTest = CrawlerApp.of("http://127.0.0.1:8000/", "4", "11000");
+        MatcherAssert.assertThat(underTest, Matchers.notNullValue());
+        MatcherAssert.assertThat(underTest.getConfig().workerCount, Matchers.is(4));
+        MatcherAssert.assertThat(underTest.getConfig().sleepTime, Matchers.is(10000L));
+        MatcherAssert.assertThat(underTest.getConfig().timeout, Matchers.is(0L));
+        MatcherAssert.assertThat(underTest.getConfig().maxChildLinks, Matchers.is(10));
+        MatcherAssert.assertThat(underTest.getConfig().siteHeight, Matchers.is(6));
+        MatcherAssert.assertThat(underTest.getConfig().siteURI, Matchers.is("http://127.0.0.1:8000"));
+        MatcherAssert.assertThat(underTest.getConfig().reportToFile, Matchers.is(false));
+    }
+
+    @Test
+    public void should_pass_valid_arguments_5_limiting_time_execution() {
+        CrawlerApp underTest = CrawlerApp.of("http://127.0.0.1:8000/", "4", "5", "10");
+        MatcherAssert.assertThat(underTest, Matchers.notNullValue());
+        MatcherAssert.assertThat(underTest.getConfig().workerCount, Matchers.is(4));
+        MatcherAssert.assertThat(underTest.getConfig().sleepTime, Matchers.is(5000L));
+        MatcherAssert.assertThat(underTest.getConfig().timeout, Matchers.is(10000L));
+        MatcherAssert.assertThat(underTest.getConfig().maxChildLinks, Matchers.is(10));
+        MatcherAssert.assertThat(underTest.getConfig().siteHeight, Matchers.is(6));
+        MatcherAssert.assertThat(underTest.getConfig().siteURI, Matchers.is("http://127.0.0.1:8000"));
+        MatcherAssert.assertThat(underTest.getConfig().reportToFile, Matchers.is(false));
+    }
+
+    @Test
+    public void should_pass_valid_arguments_6_limiting_time_execution() {
+        CrawlerApp underTest = CrawlerApp.of("http://127.0.0.1:8000/", "4", "5", "10", "true");
+        MatcherAssert.assertThat(underTest, Matchers.notNullValue());
+        MatcherAssert.assertThat(underTest.getConfig().workerCount, Matchers.is(4));
+        MatcherAssert.assertThat(underTest.getConfig().sleepTime, Matchers.is(5000L));
+        MatcherAssert.assertThat(underTest.getConfig().timeout, Matchers.is(10000L));
+        MatcherAssert.assertThat(underTest.getConfig().maxChildLinks, Matchers.is(10));
+        MatcherAssert.assertThat(underTest.getConfig().siteHeight, Matchers.is(6));
+        MatcherAssert.assertThat(underTest.getConfig().siteURI, Matchers.is("http://127.0.0.1:8000"));
+        MatcherAssert.assertThat(underTest.getConfig().reportToFile, Matchers.is(true));
+    }
+
+    @Test
+    public void should_pass_valid_arguments_7_invalid_toFile_defaults_false() {
+        CrawlerApp underTest = CrawlerApp.of("http://127.0.0.1:8000/", "3", "2", "9", "truessd");
+        MatcherAssert.assertThat(underTest, Matchers.notNullValue());
+        MatcherAssert.assertThat(underTest.getConfig().workerCount, Matchers.is(3));
+        MatcherAssert.assertThat(underTest.getConfig().sleepTime, Matchers.is(2000L));
+        MatcherAssert.assertThat(underTest.getConfig().timeout, Matchers.is(9000L));
+        MatcherAssert.assertThat(underTest.getConfig().maxChildLinks, Matchers.is(10));
+        MatcherAssert.assertThat(underTest.getConfig().siteHeight, Matchers.is(6));
+        MatcherAssert.assertThat(underTest.getConfig().siteURI, Matchers.is("http://127.0.0.1:8000"));
+        MatcherAssert.assertThat(underTest.getConfig().reportToFile, Matchers.is(false));
     }
 
     @Test
     public void should_have_defaults() {
-        CrawlerApp underTest = new CrawlerAppBuilder()
-                .withDomain("http://127.0.0.1:8000/").build();
-        DefaultCrawlerConfiguration expected = JsonHelper.getInstance().fromJsonFile("config.json", DefaultCrawlerConfiguration.class);
+        CrawlerApp underTest = new CrawlerApp(CrawlerAppConfigBuilder.newBuilder("http://127.0.0.1:8000/").build());
+        DefaultCrawlerConfiguration expected = JsonHelper.getInstance().fromJsonFile("config.json",
+                DefaultCrawlerConfiguration.class);
 
-        Assertions.assertEquals(underTest.getRequestedThreads(), expected.workerCount);
-        Assertions.assertEquals(underTest.getMaxChildren(), expected.maxSiteNodeLinks);
-        Assertions.assertEquals(underTest.getMaxSiteHeight(), expected.siteHeight);
-        Assertions.assertEquals(underTest.getThreadSleepTime(), expected.sleepTime * 1000);
-        Assertions.assertEquals(underTest.getMaxExecutionTime(), expected.maxExecutionTime);
+        Assertions.assertEquals(underTest.getConfig().workerCount, expected.workerCount);
+        Assertions.assertEquals(underTest.getConfig().maxChildLinks, expected.maxSiteNodeLinks);
+        Assertions.assertEquals(underTest.getConfig().siteHeight, expected.siteHeight);
+        Assertions.assertEquals(underTest.getConfig().sleepTime, expected.sleepTime * 1000);
+        Assertions.assertEquals(underTest.getConfig().timeout, expected.maxExecutionTime);
+        MatcherAssert.assertThat(underTest.getConfig().siteURI, Matchers.is("http://127.0.0.1:8000"));
+        MatcherAssert.assertThat(underTest.getConfig().reportToFile, Matchers.is(false));
     }
 }

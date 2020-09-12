@@ -29,16 +29,16 @@ public class CrawlerReporter {
     public static String buildReport(CrawlSiteResponse siteResponse) {
 
         Map<Long, PriorityQueue<CrawledNode>> graph = siteResponse.getGraph();
+        StringBuilder sb = new StringBuilder(String.format(RESULTS_HEADER_TEMPLATE, siteResponse.siteURI));
         Optional<CrawledNode> root = graph.getOrDefault(CrawledNode.ROOT_NODE_PARENT_ID, EMPTY_QUEUE).stream().findFirst();
-        if (root.isPresent()) {
+        if (graph.size() > 0 && root.isPresent()) {
             CrawledNode rootNode = root.get();
             Stack<CrawledNode> q = new Stack<>();
             q.add(rootNode);
 
             int totalLinks = graph.values().stream().mapToInt(Collection::size).sum();
 
-            StringBuilder sb = new StringBuilder(String.format(RESULTS_HEADER_TEMPLATE, rootNode.url))
-                .append("\nTotal Pages crawled :").append(graph.keySet().size())
+            sb.append("\nTotal Pages crawled :").append(graph.keySet().size())
                 .append("\nTotal Links Discovered: ").append(totalLinks)
                 .append("\nTotal Links not downloadable due reporting failures: ").append(siteResponse.getTotalFailures())
                 .append("\nTotal Links redirected: ").append(siteResponse.getTotalRedirects())

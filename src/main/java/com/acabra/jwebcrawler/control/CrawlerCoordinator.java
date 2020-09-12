@@ -5,6 +5,7 @@ import com.acabra.jwebcrawler.model.CrawledNode;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * This class is thread safe, as all of its attributes are final and the public methods are either atomic
@@ -25,9 +26,7 @@ public class CrawlerCoordinator {
     private final Map<Long, Set<CrawledNode>> graph = new HashMap<>();
     private boolean jobDone = false;
 
-    CrawlerCoordinator() {
-    }
-
+    CrawlerCoordinator() { }
 
     /**
      * This method indicates whether or not the given link is allowed for processing, it should not have been
@@ -36,8 +35,7 @@ public class CrawlerCoordinator {
      * @return
      */
     public synchronized boolean allowLink(String otherDomain) {
-        return !visited.contains(otherDomain)
-                && !failureLinks.contains(otherDomain);
+        return !visited.contains(otherDomain) && !failureLinks.contains(otherDomain);
     }
 
     public int getNextId() {
