@@ -17,9 +17,8 @@ Default: Available cores returned by Java Virtual Machine)
 * **{PRINT_RESULTS_TO_FILE}** Request to print results to a file that will be located in the results/ folder (Optional, Default: false)
 
 ### e.g. 
-  
-## Output
 ```./mvnw clean install; java -jar target/jwebcrawler-1.0-SNAPSHOT.jar http://localhost:8000```
+## Output
 
 For the above command with a server localhost in port 8000, serving the folder /site. will show the following
 ```
@@ -66,3 +65,13 @@ The file ```/src/main/resources/config.json``` contains the defaults for executi
      "reportToFile": false // should print report to a file (by default prints to console) 
    }
 ```
+
+## Development
+
+### Unit Tests
+Run ```mvn test```
+
+### Mutation tests
+Run ``` mvn org.pitest:pitest-maven:mutationCoverage```
+
+Results of mutation test available under folder /target/pit-reports/
