@@ -4,9 +4,12 @@ import com.acabra.jwebcrawler.model.CrawlSiteResponse;
 import com.acabra.jwebcrawler.model.CrawledNode;
 import com.acabra.jwebcrawler.service.DownloadService;
 import com.acabra.jwebcrawler.service.Downloader;
-import com.acabra.jwebcrawler.view.CrawlerReporter;
-import java.io.File;
 import java.net.http.HttpResponse;
+import java.util.Collection;
+import java.util.Map;
+import java.util.Objects;
+import java.util.PriorityQueue;
+import java.util.Stack;
 import java.util.function.Supplier;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
@@ -14,8 +17,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-
-import java.util.*;
 
 public class CrawlerAppTest {
 
@@ -27,6 +28,7 @@ public class CrawlerAppTest {
 
     @BeforeEach
     public void setup(){
+        TestUtils.cleanReportsFolder();
         Mockito.when(downloadServiceMock.download("http://localhost:8000/"))
                 .thenReturn(TestUtils.getFutureResponseOF("site/index.html"));
         Mockito.when(downloadServiceMock.download("http://localhost:8000/index.html"))
@@ -176,7 +178,7 @@ public class CrawlerAppTest {
         MatcherAssert.assertThat(graph.get(CrawledNode.ROOT_NODE_PARENT_ID), Matchers.contains(expectedRootNode));
         MatcherAssert.assertThat(Objects.requireNonNull(graph.get(CrawledNode.ROOT_NODE_PARENT_ID).peek()).url,
                 Matchers.is(domain));
-        Assertions.assertFalse(reportFileWasCreated(domain));
+        Assertions.assertFalse(TestUtils.reportFileWasCreated(underTest.getConfig().siteURI));
     }
 
     @Test
@@ -188,7 +190,7 @@ public class CrawlerAppTest {
                 .withReportToFile(true)
                 .build());
         underTest.start();
-        Assertions.assertTrue(reportFileWasCreated(domain));
+        Assertions.assertTrue(TestUtils.reportFileWasCreated(underTest.getConfig().siteURI));
     }
 
     @Test
@@ -199,22 +201,7 @@ public class CrawlerAppTest {
                 .withSleepWorkerTime(0.1)
                 .build());
         underTest.start();
-        Assertions.assertFalse(reportFileWasCreated(domain));
-    }
-
-    private boolean reportFileWasCreated(String domain) {
-        long currentTime = System.currentTimeMillis();
-        File currentFolder = new File(System.getProperty("user.dir") + "/reports");
-        String expectedName = CrawlerReporter.buildFileNameFromURI(domain);
-        if(!currentFolder.exists()) return false;
-        for(File file: currentFolder.listFiles()) {
-            if (file.isFile()
-                    && file.getName().contains("CrawlReport-"+expectedName)
-                    && (currentTime - file.lastModified()) < 500L) {
-                return true;
-            }
-        }
-        return false;
+        Assertions.assertFalse(TestUtils.reportFileWasCreated(underTest.getConfig().siteURI));
     }
 
     private int calculateActualHeight(Map<Long, PriorityQueue<CrawledNode>> graph) {

@@ -48,4 +48,18 @@ class UrlValidatorTest {
         Assertions.assertTrue(ex.getMessage().contains("Sub-domain invalid"));
     }
 
+    @Test
+    public void should_fail_domain_is_null() {
+        Exception ex = Assertions.assertThrows(NullPointerException.class,
+                () -> UrlValidator.buildURL(null));
+        Assertions.assertTrue(ex.getMessage().contains("Sub-domain not found"));
+    }
+
+    @Test
+    public void should_fail_domain_is_empty() {
+        Exception ex = Assertions.assertThrows(NullPointerException.class,
+                () -> UrlValidator.buildURL("    "));
+        Assertions.assertTrue(ex.getMessage().contains("Sub-domain not found"));
+    }
+
 }

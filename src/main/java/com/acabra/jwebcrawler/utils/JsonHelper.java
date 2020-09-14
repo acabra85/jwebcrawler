@@ -31,8 +31,8 @@ public class JsonHelper {
     public <T> T fromJsonFile(String fileName, Class<T> clazz) {
         try {
             return mapper.readValue(getFileContents(fileName), clazz);
-        } catch (IOException ioe) {
-            logger.error(ioe.getMessage());
+        } catch (Exception exception) {
+            logger.error(exception.getMessage());
         }
         return null;
     }

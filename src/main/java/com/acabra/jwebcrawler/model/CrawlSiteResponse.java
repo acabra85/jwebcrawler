@@ -9,7 +9,7 @@ public class CrawlSiteResponse {
     final int totalRedirects;
     final int totalFailures;
     final public double totalTime;
-    public final String siteURI;
+    private final String siteURI;
 
     public CrawlSiteResponse(String siteURI, Map<Long, PriorityQueue<CrawledNode>> graph, int totalRedirects,
                              int totalFailures, double totalTime) {
@@ -34,5 +34,9 @@ public class CrawlSiteResponse {
 
     public double getTotalTime() {
         return totalTime;
+    }
+
+    public String getSiteURI() {
+        return siteURI;
     }
 }

@@ -15,7 +15,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
 import org.slf4j.Logger;
@@ -88,7 +87,7 @@ public class CrawlerApp {
 
     public void start() {
         CrawlSiteResponse siteResponse = crawlSite(DownloadService::new);
-        CrawlerReporter.report(this.config.reportToFile, siteResponse, this.config.siteURI);
+        new CrawlerReporter().report(this.config.reportToFile, siteResponse, "" + System.currentTimeMillis());
     }
 
     public CrawlerAppConfig getConfig() {

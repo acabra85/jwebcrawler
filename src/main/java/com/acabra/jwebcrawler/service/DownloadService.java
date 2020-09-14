@@ -10,7 +10,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
-public class DownloadService implements Downloader{
+public class DownloadService<E> implements Downloader<E> {
 
     private static final Logger logger = LoggerFactory.getLogger(DownloadService.class);
     private final HttpClient client;
@@ -20,13 +20,14 @@ public class DownloadService implements Downloader{
                 .connectTimeout(Duration.ofSeconds(4)).build();
     }
 
-    public CompletableFuture<HttpResponse<String>> download(String url) {
+    @SuppressWarnings("unchecked")
+    public CompletableFuture<E> download(String url) {
         return client.sendAsync(buildHttpRequest(url), HttpResponse.BodyHandlers.ofString())
                 .handle((res, ex) -> {
                     if(res == null) {
                         logger.error(ex.getMessage());
                     }
-                    return res;
+                    return (E) res;
                 });
     }
 
