@@ -41,6 +41,20 @@ public class CrawlerAppBuilderTest {
     }
 
     @Test
+    public void should_fail_wrong_node_depth() {
+        Assertions.assertThrows(NumberFormatException.class, () ->
+            CrawlerApp.of("http://127.0.0.1:8000/", "4", "5", "10", "true", "sdas")
+        );
+    }
+
+    @Test
+    public void should_fail_wrong_site_height() {
+        Assertions.assertThrows(NumberFormatException.class, () ->
+            CrawlerApp.of("http://127.0.0.1:8000/", "4", "5", "10", "true", "15", "sdas")
+        );
+    }
+
+    @Test
     public void should_pass_valid_arguments_1() {
         CrawlerApp underTest = CrawlerApp.of("http://127.0.0.1:8000/");
         MatcherAssert.assertThat(underTest, Matchers.notNullValue());
@@ -142,6 +156,45 @@ public class CrawlerAppBuilderTest {
         MatcherAssert.assertThat(underTest.getConfig().siteHeight, Matchers.is(6));
         MatcherAssert.assertThat(underTest.getConfig().siteURI, Matchers.is("http://127.0.0.1:8000"));
         MatcherAssert.assertThat(underTest.getConfig().reportToFile, Matchers.is(false));
+    }
+
+    @Test
+    public void should_pass_valid_arguments_8_setting_node_depth_and_site_height() {
+        CrawlerApp underTest = CrawlerApp.of("http://127.0.0.1:8000/", "4", "5", "10", "true", "99", "9");
+        MatcherAssert.assertThat(underTest, Matchers.notNullValue());
+        MatcherAssert.assertThat(underTest.getConfig().workerCount, Matchers.is(4));
+        MatcherAssert.assertThat(underTest.getConfig().sleepTime, Matchers.is(5000L));
+        MatcherAssert.assertThat(underTest.getConfig().timeout, Matchers.is(10000L));
+        MatcherAssert.assertThat(underTest.getConfig().maxChildLinks, Matchers.is(99));
+        MatcherAssert.assertThat(underTest.getConfig().siteHeight, Matchers.is(9));
+        MatcherAssert.assertThat(underTest.getConfig().siteURI, Matchers.is("http://127.0.0.1:8000"));
+        MatcherAssert.assertThat(underTest.getConfig().reportToFile, Matchers.is(true));
+    }
+
+    @Test
+    public void should_pass_valid_arguments_9_limiting_node_depth_and_site_height() {
+        CrawlerApp underTest = CrawlerApp.of("http://127.0.0.1:8000/", "4", "5", "10", "true", "200", "20");
+        MatcherAssert.assertThat(underTest, Matchers.notNullValue());
+        MatcherAssert.assertThat(underTest.getConfig().workerCount, Matchers.is(4));
+        MatcherAssert.assertThat(underTest.getConfig().sleepTime, Matchers.is(5000L));
+        MatcherAssert.assertThat(underTest.getConfig().timeout, Matchers.is(10000L));
+        MatcherAssert.assertThat(underTest.getConfig().maxChildLinks, Matchers.is(100));
+        MatcherAssert.assertThat(underTest.getConfig().siteHeight, Matchers.is(10));
+        MatcherAssert.assertThat(underTest.getConfig().siteURI, Matchers.is("http://127.0.0.1:8000"));
+        MatcherAssert.assertThat(underTest.getConfig().reportToFile, Matchers.is(true));
+    }
+
+    @Test
+    public void should_pass_valid_arguments_10_negative_node_depth_and_site_height() {
+        CrawlerApp underTest = CrawlerApp.of("http://127.0.0.1:8000/", "4", "5", "10", "true", "-200", "-20");
+        MatcherAssert.assertThat(underTest, Matchers.notNullValue());
+        MatcherAssert.assertThat(underTest.getConfig().workerCount, Matchers.is(4));
+        MatcherAssert.assertThat(underTest.getConfig().sleepTime, Matchers.is(5000L));
+        MatcherAssert.assertThat(underTest.getConfig().timeout, Matchers.is(10000L));
+        MatcherAssert.assertThat(underTest.getConfig().maxChildLinks, Matchers.is(0));
+        MatcherAssert.assertThat(underTest.getConfig().siteHeight, Matchers.is(0));
+        MatcherAssert.assertThat(underTest.getConfig().siteURI, Matchers.is("http://127.0.0.1:8000"));
+        MatcherAssert.assertThat(underTest.getConfig().reportToFile, Matchers.is(true));
     }
 
     @Test

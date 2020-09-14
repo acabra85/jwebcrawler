@@ -7,7 +7,7 @@ public class CrawlerAppConfig {
     private final static Long MIN_SLEEP_TIME = 100L;
     private final static Long MAX_SLEEP_TIME = 10000L;
     private final static int MAX_WORKER_COUNT = 50;
-    private static final int MAX_CHILD_PER_PAGE = 10;
+    private static final int MAX_CHILD_PER_PAGE = 100;
     private static final int MAX_DEPTH = 10;
 
     public final URL rootUrl;
@@ -30,8 +30,8 @@ public class CrawlerAppConfig {
         this.workerCount = Math.min(MAX_WORKER_COUNT, Math.max(workerCount, 1));
         this.sleepTime = Math.min(MAX_SLEEP_TIME, Math.max(totalSleepTime, MIN_SLEEP_TIME));
         this.timeout = Double.valueOf(maxExecutionTime * 1000).longValue();
-        this.maxChildLinks = maxSiteNodeLinks <= 0 ? 0 : Math.min(MAX_CHILD_PER_PAGE, maxSiteNodeLinks);
-        this.siteHeight = siteHeight <= 0 ? 0 : Math.min(MAX_DEPTH, siteHeight);
+        this.siteHeight = siteHeight <= 0 ? 0 : Math.min(siteHeight, MAX_DEPTH);
+        this.maxChildLinks = maxSiteNodeLinks <= 0 ? 0 : Math.min(maxSiteNodeLinks, MAX_CHILD_PER_PAGE);
         this.reportToFile = reportToFile;
         this.isStoppable = this.timeout > 0;
     }

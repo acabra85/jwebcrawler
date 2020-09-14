@@ -3,6 +3,8 @@ package com.acabra.jwebcrawler.control;
 import com.acabra.jwebcrawler.model.CrawledNode;
 import com.acabra.jwebcrawler.model.CrawlerAppConfig;
 import com.acabra.jwebcrawler.service.DownloadService;
+import com.acabra.jwebcrawler.service.Downloader;
+import java.net.http.HttpResponse;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
@@ -18,7 +20,7 @@ import java.util.stream.IntStream;
 
 class CrawlWorkerTest {
 
-    private DownloadService downloadServiceMock = Mockito.mock(DownloadService.class);
+    private Downloader<HttpResponse<String>> downloadServiceMock = Mockito.mock(DownloadService.class);
     private CrawlerCoordinator coordinator;
     private ReentrantLock lock;
     private LinkedBlockingQueue<CrawledNode> queue;

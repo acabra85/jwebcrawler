@@ -4,7 +4,9 @@ import com.acabra.jwebcrawler.model.CrawlSiteResponse;
 import com.acabra.jwebcrawler.model.CrawledNode;
 import com.acabra.jwebcrawler.model.CrawlerAppConfig;
 import com.acabra.jwebcrawler.service.DownloadService;
+import com.acabra.jwebcrawler.service.Downloader;
 import com.acabra.jwebcrawler.view.CrawlerReporter;
+import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -13,6 +15,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.IntStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +48,7 @@ public class CrawlerApp {
         }).start();
     }
 
-    protected CrawlSiteResponse crawlSite(DownloadService downloadService) {
+    protected CrawlSiteResponse crawlSite(Supplier<Downloader<HttpResponse<String>>> supplier) {
         logger.info(String.format("Will attempt crawl for pages of SubDomain :<%s>", this.config.siteURI));
 
         BlockingQueue<CrawledNode> queue = new LinkedBlockingQueue<>();
@@ -58,7 +62,7 @@ public class CrawlerApp {
         queue.offer(new CrawledNode(config.startUri, coordinator.getNextId()));
 
         ExecutorService executorService = Executors.newFixedThreadPool(config.workerCount);
-        List<Runnable> tasks = buildTasks(queue, queueLock, coordinator, downloadService);
+        List<Runnable> tasks = buildTasks(queue, queueLock, coordinator, supplier);
         CompletableFuture<?>[] completableFutures = tasks.stream()
                 .map(task -> CompletableFuture.runAsync(task, executorService))
                 .toArray(CompletableFuture[]::new);
@@ -74,16 +78,16 @@ public class CrawlerApp {
     }
 
     private List<Runnable> buildTasks(BlockingQueue<CrawledNode> queue, ReentrantLock queueLock,
-                                      CrawlerCoordinator coordinator, DownloadService downloadService) {
+                                      CrawlerCoordinator coordinator, Supplier<Downloader<HttpResponse<String>>> supplier) {
         List<Runnable> tasks = new ArrayList<>();
         IntStream.range(0, this.config.workerCount).forEach(i ->
-                tasks.add(new CrawlWorker(queue, coordinator, queueLock, downloadService, this.config))
+                tasks.add(new CrawlWorker(queue, coordinator, queueLock, supplier.get(), this.config))
         );
         return tasks;
     }
 
     public void start() {
-        CrawlSiteResponse siteResponse = crawlSite(new DownloadService());
+        CrawlSiteResponse siteResponse = crawlSite(DownloadService::new);
         CrawlerReporter.report(this.config.reportToFile, siteResponse, this.config.siteURI);
     }
 

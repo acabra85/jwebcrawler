@@ -77,6 +77,19 @@ class CrawlerAppConfigBuilder {
         );
     }
 
+    private CrawlerAppConfigBuilder of(String subDomainStr, String reqThreadCountStr, String reqSleepThreadTime,
+                                       String maxExecutionTime, String reportToFile, String maxChildren,
+                                       String maxSiteHeight) {
+        return of(subDomainStr, reqThreadCountStr, reqSleepThreadTime, maxExecutionTime, reportToFile, maxChildren)
+                .withMaxTreeSiteHeight(Integer.parseInt(maxSiteHeight));
+    }
+
+    private CrawlerAppConfigBuilder of(String subDomainStr, String reqThreadCountStr, String reqSleepThreadTime,
+                                       String maxExecutionTime, String reportToFile, String maxSiteNodeLinks) {
+        return of(subDomainStr, reqThreadCountStr, reqSleepThreadTime, maxExecutionTime, reportToFile)
+                .withMaxSiteNodeLinks(Integer.parseInt(maxSiteNodeLinks));
+    }
+
 
     private CrawlerAppConfigBuilder of(String subDomainStr, String reqThreadCountStr, String reqSleepThreadTime,
                                        String maxExecutionTime, String reportToFile) {
@@ -115,8 +128,12 @@ class CrawlerAppConfigBuilder {
                 return builder.of(args[0], args[1], args[2]);
             } else if (args.length == 4) {
                 return builder.of(args[0], args[1], args[2], args[3]);
+            } else if (args.length == 5) {
+                return builder.of(args[0], args[1], args[2], args[3], args[4]);
+            } else if (args.length == 6) {
+                return builder.of(args[0], args[1], args[2], args[3], args[4], args[5]);
             }
-            return builder.of(args[0], args[1], args[2], args[3], args[4]);
+            return builder.of(args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
         }
         throw new NullPointerException("Sub-domain not found: This application expects at least 1 argument upon run.");
     }

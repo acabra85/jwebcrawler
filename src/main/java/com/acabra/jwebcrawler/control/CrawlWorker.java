@@ -3,6 +3,7 @@ package com.acabra.jwebcrawler.control;
 import com.acabra.jwebcrawler.model.CrawledNode;
 import com.acabra.jwebcrawler.model.CrawlerAppConfig;
 import com.acabra.jwebcrawler.service.DownloadService;
+import com.acabra.jwebcrawler.service.Downloader;
 import java.util.stream.Stream;
 import org.jsoup.Jsoup;
 import org.jsoup.select.Elements;
@@ -34,11 +35,11 @@ public class CrawlWorker implements Runnable {
     private int idleBudget; //budget units when reaches zero allows graceful termination
 
     private final List<String> EMPTY_RESPONSE = Collections.emptyList();
-    private DownloadService downloadService;
+    private Downloader<HttpResponse<String>> downloadService;
     private final CrawlerAppConfig config;
 
     public CrawlWorker(BlockingQueue<CrawledNode> queue, CrawlerCoordinator coordinator, ReentrantLock queueLock,
-                DownloadService downloadService, CrawlerAppConfig config) {
+                Downloader<HttpResponse<String>> downloadService, CrawlerAppConfig config) {
         this.queue = queue;
         this.coordinator = coordinator;
         this.idleBudget = MAX_IDLE_BUDGET;

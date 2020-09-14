@@ -10,7 +10,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
-public class DownloadService {
+public class DownloadService implements Downloader{
 
     private static final Logger logger = LoggerFactory.getLogger(DownloadService.class);
     private final HttpClient client;

@@ -3,8 +3,11 @@ package com.acabra.jwebcrawler.control;
 import com.acabra.jwebcrawler.model.CrawlSiteResponse;
 import com.acabra.jwebcrawler.model.CrawledNode;
 import com.acabra.jwebcrawler.service.DownloadService;
+import com.acabra.jwebcrawler.service.Downloader;
 import com.acabra.jwebcrawler.view.CrawlerReporter;
 import java.io.File;
+import java.net.http.HttpResponse;
+import java.util.function.Supplier;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
@@ -18,35 +21,37 @@ public class CrawlerAppTest {
 
     private static final PriorityQueue<CrawledNode> EMPTY_PQ = new PriorityQueue<>();
 
-    DownloadService downloadService = Mockito.mock(DownloadService.class);
+    DownloadService downloadServiceMock = Mockito.mock(DownloadService.class);
+
+    Supplier<Downloader<HttpResponse<String>>> downloadServiceSupplier = () -> downloadServiceMock;
 
     @BeforeEach
     public void setup(){
-        Mockito.when(downloadService.download("http://localhost:8000/"))
+        Mockito.when(downloadServiceMock.download("http://localhost:8000/"))
                 .thenReturn(TestUtils.getFutureResponseOF("site/index.html"));
-        Mockito.when(downloadService.download("http://localhost:8000/index.html"))
+        Mockito.when(downloadServiceMock.download("http://localhost:8000/index.html"))
                 .thenReturn(TestUtils.getFutureResponseOF("site/index.html"));
-        Mockito.when(downloadService.download("http://localhost:8000/a2.html"))
+        Mockito.when(downloadServiceMock.download("http://localhost:8000/a2.html"))
                 .thenReturn(TestUtils.getFutureResponseOF("site/a2.html"));
-        Mockito.when(downloadService.download("http://localhost:8000/a3.html"))
+        Mockito.when(downloadServiceMock.download("http://localhost:8000/a3.html"))
                 .thenReturn(TestUtils.getFutureResponseOF("site/a3.html"));
-        Mockito.when(downloadService.download("http://localhost:8000/a4.html"))
+        Mockito.when(downloadServiceMock.download("http://localhost:8000/a4.html"))
                 .thenReturn(TestUtils.getFutureResponseOF("site/a4.html"));
-        Mockito.when(downloadService.download("http://localhost:8000/a5.html"))
+        Mockito.when(downloadServiceMock.download("http://localhost:8000/a5.html"))
                 .thenReturn(TestUtils.getFutureResponseOF("site/a5.html"));
-        Mockito.when(downloadService.download("http://localhost:8000/a6.html"))
+        Mockito.when(downloadServiceMock.download("http://localhost:8000/a6.html"))
                 .thenReturn(TestUtils.getFutureResponseOF("site/a6.html"));
-        Mockito.when(downloadService.download("http://localhost:8000/a7.html"))
+        Mockito.when(downloadServiceMock.download("http://localhost:8000/a7.html"))
                 .thenReturn(TestUtils.getFutureResponseOF("site/a7.html"));
-        Mockito.when(downloadService.download("http://localhost:8000/a8.html"))
+        Mockito.when(downloadServiceMock.download("http://localhost:8000/a8.html"))
                 .thenReturn(TestUtils.getFutureResponseOF("site/a8.html"));
-        Mockito.when(downloadService.download("http://localhost:8000/a9.html"))
+        Mockito.when(downloadServiceMock.download("http://localhost:8000/a9.html"))
                 .thenReturn(TestUtils.getFutureEmptyResponse());
-        Mockito.when(downloadService.download("http://localhost:8000/a6redirect.html"))
+        Mockito.when(downloadServiceMock.download("http://localhost:8000/a6redirect.html"))
                 .thenReturn(TestUtils.getFutureRedirectResponse());
-        Mockito.when(downloadService.download("http://localhost:8000/mypdffile.pdf"))
+        Mockito.when(downloadServiceMock.download("http://localhost:8000/mypdffile.pdf"))
                 .thenReturn(TestUtils.getFuturePDFResponse());
-        Mockito.when(downloadService.download("http://delayed-website.com"))
+        Mockito.when(downloadServiceMock.download("http://delayed-website.com"))
                 .thenAnswer((invocationOnMock) -> {
                     Thread.sleep(5000L);
                     return TestUtils.getFutureEmptyResponse();
@@ -63,20 +68,20 @@ public class CrawlerAppTest {
                 .withMaxTreeSiteHeight(expectedSiteMaxHeight)
                 .withMaxSiteNodeLinks(maxSiteNodeLinks)
                 .build());
-        CrawlSiteResponse crawlSiteResponse = crawlerApp.crawlSite(downloadService);
+        CrawlSiteResponse crawlSiteResponse = crawlerApp.crawlSite(downloadServiceSupplier);
         Map<Long, PriorityQueue<CrawledNode>> graph = crawlSiteResponse.getGraph();
 
-        Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/");
-        Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/index.html");
-        Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/a2.html");
-        Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/a3.html");
-        Mockito.verify(downloadService, Mockito.times(0)).download("http://localhost:8000/a4.html");
-        Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/a5.html");
-        Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/a6.html");
-        Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/a6redirect.html");
-        Mockito.verify(downloadService, Mockito.times(0)).download("http://localhost:8000/a7.html");
-        Mockito.verify(downloadService, Mockito.times(0)).download("http://localhost:8000/a8.html");
-        Mockito.verify(downloadService, Mockito.times(0)).download("http://localhost:8000/a9.html");
+        Mockito.verify(downloadServiceMock, Mockito.times(1)).download("http://localhost:8000/");
+        Mockito.verify(downloadServiceMock, Mockito.times(1)).download("http://localhost:8000/index.html");
+        Mockito.verify(downloadServiceMock, Mockito.times(1)).download("http://localhost:8000/a2.html");
+        Mockito.verify(downloadServiceMock, Mockito.times(1)).download("http://localhost:8000/a3.html");
+        Mockito.verify(downloadServiceMock, Mockito.times(0)).download("http://localhost:8000/a4.html");
+        Mockito.verify(downloadServiceMock, Mockito.times(1)).download("http://localhost:8000/a5.html");
+        Mockito.verify(downloadServiceMock, Mockito.times(1)).download("http://localhost:8000/a6.html");
+        Mockito.verify(downloadServiceMock, Mockito.times(1)).download("http://localhost:8000/a6redirect.html");
+        Mockito.verify(downloadServiceMock, Mockito.times(0)).download("http://localhost:8000/a7.html");
+        Mockito.verify(downloadServiceMock, Mockito.times(0)).download("http://localhost:8000/a8.html");
+        Mockito.verify(downloadServiceMock, Mockito.times(0)).download("http://localhost:8000/a9.html");
 
         Assertions.assertEquals(crawlSiteResponse.getTotalFailures(), 1);
         Assertions.assertEquals(crawlSiteResponse.getTotalRedirects(), 1);
@@ -95,19 +100,19 @@ public class CrawlerAppTest {
                 .withMaxTreeSiteHeight(expectedSiteMaxHeight)
                 .withMaxSiteNodeLinks(maxSiteNodeLinks)
                 .build());
-        CrawlSiteResponse crawlSiteResponse = crawlerApp.crawlSite(downloadService);
+        CrawlSiteResponse crawlSiteResponse = crawlerApp.crawlSite(downloadServiceSupplier);
         Map<Long, PriorityQueue<CrawledNode>> graph = crawlSiteResponse.getGraph();
 
-        Mockito.verify(downloadService, Mockito.atLeastOnce()).download("http://localhost:8000/");
-        Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/a2.html");
-        Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/a3.html");
-        Mockito.verify(downloadService, Mockito.times(0)).download("http://localhost:8000/a4.html");
-        Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/index.html");
-        Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/a5.html");
-        Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/a6.html");
-        Mockito.verify(downloadService, Mockito.times(0)).download("http://localhost:8000/a7.html");
-        Mockito.verify(downloadService, Mockito.times(0)).download("http://localhost:8000/a8.html");
-        Mockito.verify(downloadService, Mockito.times(0)).download("http://localhost:8000/a9.html");
+        Mockito.verify(downloadServiceMock, Mockito.atLeastOnce()).download("http://localhost:8000/");
+        Mockito.verify(downloadServiceMock, Mockito.times(1)).download("http://localhost:8000/a2.html");
+        Mockito.verify(downloadServiceMock, Mockito.times(1)).download("http://localhost:8000/a3.html");
+        Mockito.verify(downloadServiceMock, Mockito.times(0)).download("http://localhost:8000/a4.html");
+        Mockito.verify(downloadServiceMock, Mockito.times(1)).download("http://localhost:8000/index.html");
+        Mockito.verify(downloadServiceMock, Mockito.times(1)).download("http://localhost:8000/a5.html");
+        Mockito.verify(downloadServiceMock, Mockito.times(1)).download("http://localhost:8000/a6.html");
+        Mockito.verify(downloadServiceMock, Mockito.times(0)).download("http://localhost:8000/a7.html");
+        Mockito.verify(downloadServiceMock, Mockito.times(0)).download("http://localhost:8000/a8.html");
+        Mockito.verify(downloadServiceMock, Mockito.times(0)).download("http://localhost:8000/a9.html");
 
         Assertions.assertEquals(crawlSiteResponse.getTotalFailures(), 0);
         Assertions.assertEquals(crawlSiteResponse.getTotalRedirects(), 0);
@@ -126,19 +131,19 @@ public class CrawlerAppTest {
                 .withMaxTreeSiteHeight(maxTreeSiteHeight)
                 .withMaxSiteNodeLinks(maxSiteNodeLinks)
                 .build());
-        CrawlSiteResponse crawlSiteResponse = crawlerApp.crawlSite(downloadService);
+        CrawlSiteResponse crawlSiteResponse = crawlerApp.crawlSite(downloadServiceSupplier);
         Map<Long, PriorityQueue<CrawledNode>> graph = crawlSiteResponse.getGraph();
 
-        Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/");
-        Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/a2.html");
-        Mockito.verify(downloadService, Mockito.times(0)).download("http://localhost:8000/a3.html");
-        Mockito.verify(downloadService, Mockito.times(0)).download("http://localhost:8000/a4.html");
-        Mockito.verify(downloadService, Mockito.times(1)).download("http://localhost:8000/index.html");
-        Mockito.verify(downloadService, Mockito.times(0)).download("http://localhost:8000/a5.html");
-        Mockito.verify(downloadService, Mockito.times(0)).download("http://localhost:8000/a6.html");
-        Mockito.verify(downloadService, Mockito.times(0)).download("http://localhost:8000/a7.html");
-        Mockito.verify(downloadService, Mockito.times(0)).download("http://localhost:8000/a8.html");
-        Mockito.verify(downloadService, Mockito.times(0)).download("http://localhost:8000/a9.html");
+        Mockito.verify(downloadServiceMock, Mockito.times(1)).download("http://localhost:8000/");
+        Mockito.verify(downloadServiceMock, Mockito.times(1)).download("http://localhost:8000/a2.html");
+        Mockito.verify(downloadServiceMock, Mockito.times(0)).download("http://localhost:8000/a3.html");
+        Mockito.verify(downloadServiceMock, Mockito.times(0)).download("http://localhost:8000/a4.html");
+        Mockito.verify(downloadServiceMock, Mockito.times(1)).download("http://localhost:8000/index.html");
+        Mockito.verify(downloadServiceMock, Mockito.times(0)).download("http://localhost:8000/a5.html");
+        Mockito.verify(downloadServiceMock, Mockito.times(0)).download("http://localhost:8000/a6.html");
+        Mockito.verify(downloadServiceMock, Mockito.times(0)).download("http://localhost:8000/a7.html");
+        Mockito.verify(downloadServiceMock, Mockito.times(0)).download("http://localhost:8000/a8.html");
+        Mockito.verify(downloadServiceMock, Mockito.times(0)).download("http://localhost:8000/a9.html");
 
         Assertions.assertEquals(crawlSiteResponse.getTotalFailures(), 0);
         Assertions.assertEquals(crawlSiteResponse.getTotalRedirects(), 0);
@@ -156,12 +161,12 @@ public class CrawlerAppTest {
                 .withMaxExecutionTime(2)
                 .build());
 
-        CrawlSiteResponse actualResponse = underTest.crawlSite(downloadService);
+        CrawlSiteResponse actualResponse = underTest.crawlSite(downloadServiceSupplier);
         Map<Long, PriorityQueue<CrawledNode>> graph = actualResponse.getGraph();
 
         CrawledNode expectedRootNode = new CrawledNode(domain, 0L);
 
-        Mockito.verify(downloadService, Mockito.times(1)).download(domain);
+        Mockito.verify(downloadServiceMock, Mockito.times(1)).download(domain);
 
         Assertions.assertEquals(actualResponse.getTotalRedirects(), 0);
         Assertions.assertEquals(actualResponse.getTotalFailures(), 1);
