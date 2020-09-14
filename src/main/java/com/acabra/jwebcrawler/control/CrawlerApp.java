@@ -56,11 +56,12 @@ public class CrawlerApp {
         ReentrantLock queueLock = new ReentrantLock(true);
 
         // enqueue the first website
+        ExecutorService executorService = Executors.newFixedThreadPool(config.workerCount);
+
         final CrawlerCoordinator coordinator = new CrawlerCoordinator();
 
         queue.offer(new CrawledNode(config.startUri, coordinator.getNextId()));
 
-        ExecutorService executorService = Executors.newFixedThreadPool(config.workerCount);
         List<Runnable> tasks = buildTasks(queue, queueLock, coordinator, supplier);
         CompletableFuture<?>[] completableFutures = tasks.stream()
                 .map(task -> CompletableFuture.runAsync(task, executorService))
@@ -77,10 +78,11 @@ public class CrawlerApp {
     }
 
     private List<Runnable> buildTasks(BlockingQueue<CrawledNode> queue, ReentrantLock queueLock,
-                                      CrawlerCoordinator coordinator, Supplier<Downloader<HttpResponse<String>>> supplier) {
+                                      CrawlerCoordinator coordinator,
+                                      Supplier<Downloader<HttpResponse<String>>> supplier) {
         List<Runnable> tasks = new ArrayList<>();
         IntStream.range(0, this.config.workerCount).forEach(i ->
-                tasks.add(new CrawlWorker(queue, coordinator, queueLock, supplier.get(), this.config))
+                tasks.add(new CrawlConsumerWorker(queue, coordinator, queueLock, supplier.get(), this.config.copy()))
         );
         return tasks;
     }

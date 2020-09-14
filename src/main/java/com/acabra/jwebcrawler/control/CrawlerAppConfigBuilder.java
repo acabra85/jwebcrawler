@@ -66,7 +66,7 @@ class CrawlerAppConfigBuilder {
 
     public CrawlerAppConfig build() {
         URL rootUrl = UrlValidator.buildURL(domain);
-        return new CrawlerAppConfig(
+        return CrawlerAppConfig.of(
                 rootUrl,
                 this.workerCount,
                 this.sleepTime,

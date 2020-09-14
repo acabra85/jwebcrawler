@@ -12,32 +12,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.stream.IntStream;
 
-class CrawlWorkerTest {
+class CrawlConsumerWorkerTest {
 
     private Downloader<HttpResponse<String>> downloadServiceMock = Mockito.mock(DownloadService.class);
     private CrawlerCoordinator coordinator;
     private ReentrantLock lock;
     private LinkedBlockingQueue<CrawledNode> queue;
-
-    private String getHtmlWithLinks() {
-        return "<html lang=\"en\">\n" +
-                "<body>\n" +
-                "<a href=\"https://www.someexternalwebsite.com/\">some website</a>\n" +
-                "<a href=\"/index.html\">index</a>\n" +
-                "<div><a href=\"/a5.html\">a5</a></div>" +
-                "<div><a href=\"/a7.html\">a7</a></div>" +
-                "<div><a href=\"/a8.html\">a8</a></div>" +
-                "<div><a href=\"/a8.html\">a8</a></div>" +
-                "<div><a href=\"/a5.html\">a5</a></div>" +
-                "</body>\n" +
-                "</html>";
-    }
 
     private Thread buildAndStartThread(Runnable runnable) {
         Thread thread = new Thread(runnable);
@@ -73,43 +57,6 @@ class CrawlWorkerTest {
     }
 
     @Test
-    public void should_return_unique_sub_domain_links() {
-        CrawlerAppConfig defaults = CrawlerAppConfigBuilder
-                .newBuilder("http://mysite.com/")
-                .withMaxSiteNodeLinks(0) //dont limit child nodes
-                .build();
-        CrawlWorker underTest = new CrawlWorker(queue, coordinator, lock, downloadServiceMock, defaults);
-        List<String> expected = List.of("http://mysite.com/index.html",
-                "http://mysite.com/a5.html",
-                "http://mysite.com/a7.html",
-                "http://mysite.com/a8.html");
-        List<String> actualLinks = underTest.extractLinks(getHtmlWithLinks(), "http://mysite.com");
-
-        Mockito.verify(downloadServiceMock, Mockito.never()).download(Mockito.anyString());
-
-        Assertions.assertEquals(actualLinks.size(), expected.size());
-        IntStream.range(0, actualLinks.size()).forEach(i ->
-                MatcherAssert.assertThat(actualLinks.get(i), Matchers.is(expected.get(i))));
-    }
-
-    @Test
-    public void should_return_unique_sub_domain_links_limited() {
-        CrawlerAppConfig defaults = CrawlerAppConfigBuilder
-                .newBuilder("http://mysite.com/")
-                .withMaxSiteNodeLinks(2)
-                .build();
-        CrawlWorker underTest = new CrawlWorker(queue, coordinator, lock, downloadServiceMock, defaults);
-        List<String> expected = List.of("http://mysite.com/index.html", "http://mysite.com/a5.html");
-        List<String> actualLinks = underTest.extractLinks(getHtmlWithLinks(), "http://mysite.com");
-
-        Mockito.verify(downloadServiceMock, Mockito.never()).download(Mockito.anyString());
-
-        Assertions.assertEquals(actualLinks.size(), expected.size());
-        IntStream.range(0, actualLinks.size()).forEach(i ->
-                MatcherAssert.assertThat(actualLinks.get(i), Matchers.is(expected.get(i))));
-    }
-
-    @Test
     public void should_terminate_after_coordinator_request_job_done_stoppable_worker() {
         CrawlerAppConfig defaults = CrawlerAppConfigBuilder.newBuilder("http://mysite.com/")
                 .withSleepWorkerTime(0.5)
@@ -117,7 +64,7 @@ class CrawlWorkerTest {
                 .build();
 
         coordinator.requestJobDone();
-        CrawlWorker underTest = new CrawlWorker(queue, coordinator, new ReentrantLock(), downloadServiceMock, defaults);
+        CrawlConsumerWorker underTest = new CrawlConsumerWorker(queue, coordinator, new ReentrantLock(), downloadServiceMock, defaults);
 
         CompletableFuture.runAsync(underTest, Executors.newSingleThreadExecutor()).join();
 
@@ -125,7 +72,7 @@ class CrawlWorkerTest {
 
         Assertions.assertTrue(defaults.isStoppable);
         Assertions.assertFalse(underTest.isEndInterrupted());
-        MatcherAssert.assertThat(underTest.getIdleBudget(), Matchers.is(CrawlWorker.MAX_IDLE_BUDGET));
+        MatcherAssert.assertThat(underTest.getIdleBudget(), Matchers.is(CrawlConsumerWorker.MAX_IDLE_BUDGET));
     }
 
     @Test
@@ -136,7 +83,7 @@ class CrawlWorkerTest {
 
         coordinator.requestJobDone();
         queue.offer(new CrawledNode(defaults.startUri, 0L));
-        CrawlWorker underTest = new CrawlWorker(queue, coordinator, new ReentrantLock(), downloadServiceMock, defaults);
+        CrawlConsumerWorker underTest = new CrawlConsumerWorker(queue, coordinator, new ReentrantLock(), downloadServiceMock, defaults);
 
         CompletableFuture.runAsync(underTest, Executors.newSingleThreadExecutor()).join();
 
@@ -157,7 +104,7 @@ class CrawlWorkerTest {
 
         coordinator.requestJobDone();
         queue.offer(new CrawledNode(defaults.startUri, 0L));
-        CrawlWorker underTest = new CrawlWorker(queue, coordinator, new ReentrantLock(), downloadServiceMock, defaults);
+        CrawlConsumerWorker underTest = new CrawlConsumerWorker(queue, coordinator, new ReentrantLock(), downloadServiceMock, defaults);
 
         CompletableFuture.runAsync(underTest, Executors.newSingleThreadExecutor()).join();
 
@@ -178,7 +125,7 @@ class CrawlWorkerTest {
 
         coordinator.requestJobDone();
         queue.offer(new CrawledNode(defaults.startUri, 0L));
-        CrawlWorker underTest = new CrawlWorker(queue, coordinator, new ReentrantLock(), downloadServiceMock, defaults);
+        CrawlConsumerWorker underTest = new CrawlConsumerWorker(queue, coordinator, new ReentrantLock(), downloadServiceMock, defaults);
 
         CompletableFuture.runAsync(underTest, Executors.newSingleThreadExecutor()).join();
 
@@ -200,7 +147,7 @@ class CrawlWorkerTest {
         CrawlerCoordinator coordinatorMock = Mockito.mock(CrawlerCoordinator.class);
         Mockito.when(coordinatorMock.isJobDone()).thenReturn(true);
 
-        CrawlWorker underTest = new CrawlWorker(queue, coordinatorMock, new ReentrantLock(), downloadServiceMock, defaults);
+        CrawlConsumerWorker underTest = new CrawlConsumerWorker(queue, coordinatorMock, new ReentrantLock(), downloadServiceMock, defaults);
         queue.offer(new CrawledNode(defaults.startUri, 0L));
 
         CompletableFuture.runAsync(underTest, Executors.newSingleThreadExecutor()).join();
@@ -211,7 +158,7 @@ class CrawlWorkerTest {
         Assertions.assertTrue(defaults.isStoppable);
         Assertions.assertEquals(1, queue.size());
         Assertions.assertFalse(underTest.isEndInterrupted());
-        MatcherAssert.assertThat(underTest.getIdleBudget(), Matchers.is(CrawlWorker.MAX_IDLE_BUDGET));
+        MatcherAssert.assertThat(underTest.getIdleBudget(), Matchers.is(CrawlConsumerWorker.MAX_IDLE_BUDGET));
     }
 
     @Test
@@ -224,7 +171,7 @@ class CrawlWorkerTest {
         queue.offer(new CrawledNode(defaults.startUri, 0L));
         sharedLock.lock(); //prevent worker from taking nodes from the queue forcing sleep time.
 
-        CrawlWorker underTest = new CrawlWorker(queue, coordinator, sharedLock, downloadServiceMock, defaults);
+        CrawlConsumerWorker underTest = new CrawlConsumerWorker(queue, coordinator, sharedLock, downloadServiceMock, defaults);
         CompletableFuture.runAsync(underTest, Executors.newSingleThreadExecutor());
 
         Thread.sleep(100L);
@@ -236,7 +183,7 @@ class CrawlWorkerTest {
         Assertions.assertTrue(defaults.isStoppable);
         Assertions.assertFalse(underTest.isEndInterrupted());
         Assertions.assertEquals(1, queue.size());
-        MatcherAssert.assertThat(underTest.getIdleBudget(), Matchers.lessThan(CrawlWorker.MAX_IDLE_BUDGET));
+        MatcherAssert.assertThat(underTest.getIdleBudget(), Matchers.lessThan(CrawlConsumerWorker.MAX_IDLE_BUDGET));
     }
 
     @Test
@@ -244,7 +191,7 @@ class CrawlWorkerTest {
         CrawlerAppConfig defaults = CrawlerAppConfigBuilder.newBuilder("http://delayed-website.com")
                 .withSleepWorkerTime(0.75)
                 .build();
-        CrawlWorker underTest = new CrawlWorker(queue, coordinator, new ReentrantLock(), downloadServiceMock, defaults);
+        CrawlConsumerWorker underTest = new CrawlConsumerWorker(queue, coordinator, new ReentrantLock(), downloadServiceMock, defaults);
         queue.offer(new CrawledNode(defaults.startUri, 0L));
         Thread workerThread = buildAndStartThread(underTest);
         Thread.sleep(100L);
@@ -255,7 +202,7 @@ class CrawlWorkerTest {
         Assertions.assertFalse(defaults.isStoppable);
         Assertions.assertTrue(queue.isEmpty());
         Assertions.assertTrue(underTest.isEndInterrupted());
-        MatcherAssert.assertThat(underTest.getIdleBudget(), Matchers.is(CrawlWorker.MAX_IDLE_BUDGET));
+        MatcherAssert.assertThat(underTest.getIdleBudget(), Matchers.is(CrawlConsumerWorker.MAX_IDLE_BUDGET));
     }
 
     @Test
@@ -266,7 +213,7 @@ class CrawlWorkerTest {
                 .build();
         queue.offer(new CrawledNode(defaults.startUri, 0L));
 
-        CrawlWorker underTest = new CrawlWorker(queue, coordinator, new ReentrantLock(), downloadServiceMock, defaults);
+        CrawlConsumerWorker underTest = new CrawlConsumerWorker(queue, coordinator, new ReentrantLock(), downloadServiceMock, defaults);
         Thread workerThread = buildAndStartThread(underTest);
         Thread.sleep(100L);
         workerThread.interrupt();
@@ -276,7 +223,7 @@ class CrawlWorkerTest {
         Assertions.assertTrue(defaults.isStoppable);
         Assertions.assertTrue(queue.isEmpty());
         Assertions.assertTrue(underTest.isEndInterrupted());
-        MatcherAssert.assertThat(underTest.getIdleBudget(), Matchers.is(CrawlWorker.MAX_IDLE_BUDGET));
+        MatcherAssert.assertThat(underTest.getIdleBudget(), Matchers.is(CrawlConsumerWorker.MAX_IDLE_BUDGET));
     }
 
     @Test
@@ -285,7 +232,7 @@ class CrawlWorkerTest {
                 .withSleepWorkerTime(0.01)
                 .build();
         int expectedIdleBudget = 0;
-        CrawlWorker underTest = new CrawlWorker(queue, coordinator, lock, downloadServiceMock, defaults);
+        CrawlConsumerWorker underTest = new CrawlConsumerWorker(queue, coordinator, lock, downloadServiceMock, defaults);
 
         CompletableFuture.runAsync(underTest, Executors.newSingleThreadExecutor()).join();
 
@@ -304,7 +251,7 @@ class CrawlWorkerTest {
                 .withMaxExecutionTime(0.25) //indicates the worker is stoppable
                 .build();
         int expectedIdleBudget = 0;
-        CrawlWorker underTest = new CrawlWorker(queue, coordinator, lock, downloadServiceMock, defaults);
+        CrawlConsumerWorker underTest = new CrawlConsumerWorker(queue, coordinator, lock, downloadServiceMock, defaults);
 
         CompletableFuture.runAsync(underTest, Executors.newSingleThreadExecutor()).join();
 
@@ -322,9 +269,9 @@ class CrawlWorkerTest {
                 .withSleepWorkerTime(0.01)
                 .withMaxExecutionTime(0.25) //indicates the worker is stoppable
                 .build();
-        int expectedIdleBudget = CrawlWorker.MAX_IDLE_BUDGET;
+        int expectedIdleBudget = CrawlConsumerWorker.MAX_IDLE_BUDGET;
         queue.offer(new CrawledNode(defaults.startUri, 0L));
-        CrawlWorker underTest = new CrawlWorker(queue, coordinator, lock, downloadServiceMock, defaults);
+        CrawlConsumerWorker underTest = new CrawlConsumerWorker(queue, coordinator, lock, downloadServiceMock, defaults);
 
         CompletableFuture.runAsync(underTest, Executors.newSingleThreadExecutor()).join();
 
@@ -339,9 +286,9 @@ class CrawlWorkerTest {
         CrawlerAppConfig defaults = CrawlerAppConfigBuilder.newBuilder("http://throwexeptionsite.com/")
                 .withSleepWorkerTime(0.01)
                 .build();
-        int expectedIdleBudget = CrawlWorker.MAX_IDLE_BUDGET;
+        int expectedIdleBudget = CrawlConsumerWorker.MAX_IDLE_BUDGET;
         queue.offer(new CrawledNode(defaults.startUri, 0L));
-        CrawlWorker underTest = new CrawlWorker(queue, coordinator, lock, downloadServiceMock, defaults);
+        CrawlConsumerWorker underTest = new CrawlConsumerWorker(queue, coordinator, lock, downloadServiceMock, defaults);
 
         CompletableFuture.runAsync(underTest, Executors.newSingleThreadExecutor()).join();
 
@@ -356,13 +303,13 @@ class CrawlWorkerTest {
         CrawlerAppConfig defaults = CrawlerAppConfigBuilder.newBuilder("http://throwexeptionsite.com/")
                 .withSleepWorkerTime(0.01)
                 .build();
-        int expectedIdleBudget = CrawlWorker.MAX_IDLE_BUDGET;
+        int expectedIdleBudget = CrawlConsumerWorker.MAX_IDLE_BUDGET;
         queue.offer(new CrawledNode(defaults.startUri, 0L));
         LinkedBlockingQueue<CrawledNode> spyQueue = Mockito.spy(queue);
         Mockito.doThrow(new InterruptedException("Forcing interruption of thread"))
                 .when(spyQueue).take();
 
-        CrawlWorker underTest = new CrawlWorker(spyQueue, coordinator, lock, downloadServiceMock, defaults);
+        CrawlConsumerWorker underTest = new CrawlConsumerWorker(spyQueue, coordinator, lock, downloadServiceMock, defaults);
 
         CompletableFuture.runAsync(underTest, Executors.newSingleThreadExecutor()).join();
 
@@ -378,13 +325,13 @@ class CrawlWorkerTest {
                 .withSleepWorkerTime(0.01)
                 .withMaxExecutionTime(0.25)
                 .build();
-        int expectedIdleBudget = CrawlWorker.MAX_IDLE_BUDGET;
+        int expectedIdleBudget = CrawlConsumerWorker.MAX_IDLE_BUDGET;
         queue.offer(new CrawledNode(defaults.startUri, 0L));
         LinkedBlockingQueue<CrawledNode> spyQueue = Mockito.spy(queue);
         Mockito.doThrow(new InterruptedException("Forcing interruption of thread"))
                 .when(spyQueue).take();
 
-        CrawlWorker underTest = new CrawlWorker(spyQueue, coordinator, lock, downloadServiceMock, defaults);
+        CrawlConsumerWorker underTest = new CrawlConsumerWorker(spyQueue, coordinator, lock, downloadServiceMock, defaults);
 
         CompletableFuture.runAsync(underTest, Executors.newSingleThreadExecutor()).join();
 
@@ -403,7 +350,7 @@ class CrawlWorkerTest {
                 .withSleepWorkerTime(0.01)
                 .withMaxExecutionTime(0.25)
                 .build();
-        AtomicInteger workUnits = new AtomicInteger(CrawlWorker.MAX_IDLE_BUDGET + 1);
+        AtomicInteger workUnits = new AtomicInteger(CrawlConsumerWorker.MAX_IDLE_BUDGET + 1);
 
         Mockito.when(downloadServiceMock.download(defaults.startUri))
                 .thenReturn(TestUtils.getFutureEmptyResponse());
@@ -420,15 +367,15 @@ class CrawlWorkerTest {
             return false;
         }));
 
-        CrawlWorker underTest = new CrawlWorker(queue, coordinatorSpy, new ReentrantLock(), downloadServiceMock, defaults);
+        CrawlConsumerWorker underTest = new CrawlConsumerWorker(queue, coordinatorSpy, new ReentrantLock(), downloadServiceMock, defaults);
         CompletableFuture.runAsync(underTest, Executors.newSingleThreadExecutor()).join();
 
         Mockito.verify(downloadServiceMock, Mockito.times(1)).download(Mockito.anyString());
-        Mockito.verify(coordinatorSpy, Mockito.times(CrawlWorker.MAX_IDLE_BUDGET + CrawlWorker.AWARDED_UNITS)).isJobDone();
+        Mockito.verify(coordinatorSpy, Mockito.times(CrawlConsumerWorker.MAX_IDLE_BUDGET + CrawlConsumerWorker.AWARDED_UNITS)).isJobDone();
 
         Assertions.assertTrue(defaults.isStoppable);
         Assertions.assertTrue(queue.isEmpty());
         Assertions.assertFalse(underTest.isEndInterrupted());
-        MatcherAssert.assertThat(underTest.getIdleBudget(), Matchers.is(CrawlWorker.AWARDED_UNITS)); //worker awarded 2 units.
+        MatcherAssert.assertThat(underTest.getIdleBudget(), Matchers.is(CrawlConsumerWorker.AWARDED_UNITS)); //worker awarded 2 units.
     }
 }

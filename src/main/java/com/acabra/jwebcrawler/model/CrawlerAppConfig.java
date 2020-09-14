@@ -21,19 +21,33 @@ public class CrawlerAppConfig {
     public final String startUri;
     public final String siteURI;
 
-    public CrawlerAppConfig(URL rootUrl, int workerCount, double sleepTime, double maxExecutionTime,
-                            int siteHeight, int maxSiteNodeLinks, boolean reportToFile) {
-        long totalSleepTime = Double.valueOf(Math.min(sleepTime, 10.0) * 1000).longValue();
+    private CrawlerAppConfig(URL rootUrl, String siteURI, int workerCount, long sleepTime,
+                             long timeout, int siteHeight, int maxSiteNodeLinks,
+                             boolean reportToFile) {
         this.rootUrl = rootUrl;
-        this.siteURI = String.format("%s://%s", rootUrl.getProtocol(), rootUrl.getAuthority());
+        this.siteURI = siteURI;
         this.startUri = siteURI + rootUrl.getPath();
-        this.workerCount = Math.min(MAX_WORKER_COUNT, Math.max(workerCount, 1));
-        this.sleepTime = Math.min(MAX_SLEEP_TIME, Math.max(totalSleepTime, MIN_SLEEP_TIME));
-        this.timeout = Double.valueOf(maxExecutionTime * 1000).longValue();
-        this.siteHeight = siteHeight <= 0 ? 0 : Math.min(siteHeight, MAX_DEPTH);
-        this.maxChildLinks = maxSiteNodeLinks <= 0 ? 0 : Math.min(maxSiteNodeLinks, MAX_CHILD_PER_PAGE);
+        this.workerCount = workerCount;
+        this.sleepTime = sleepTime;
+        this.timeout = timeout;
+        this.siteHeight = siteHeight;
+        this.maxChildLinks = maxSiteNodeLinks;
         this.reportToFile = reportToFile;
         this.isStoppable = this.timeout > 0;
+    }
+
+    public static CrawlerAppConfig of(URL rootUrl, int workerCount, double sleepTime, double maxExecutionTime,
+                                      int siteHeight, int maxSiteNodeLinks, boolean reportToFile) {
+        long totalSleepTime = Double.valueOf(Math.min(sleepTime, 10.0) * 1000).longValue();
+        return new CrawlerAppConfig(
+                rootUrl,
+                String.format("%s://%s", rootUrl.getProtocol(), rootUrl.getAuthority()),
+                Math.min(MAX_WORKER_COUNT, Math.max(workerCount, 1)),
+                Math.min(MAX_SLEEP_TIME, Math.max(totalSleepTime, MIN_SLEEP_TIME)),
+                Double.valueOf(maxExecutionTime * 1000).longValue(),
+                siteHeight <= 0 ? 0 : Math.min(siteHeight, MAX_DEPTH),
+                maxSiteNodeLinks <= 0 ? 0 : Math.min(maxSiteNodeLinks, MAX_CHILD_PER_PAGE),
+                reportToFile);
     }
 
     @Override
@@ -50,5 +64,18 @@ public class CrawlerAppConfig {
                 ", startUri='" + startUri + '\'' +
                 ", siteURI='" + siteURI + '\'' +
                 '}';
+    }
+
+    public CrawlerAppConfig copy() {
+        return new CrawlerAppConfig(
+                this.rootUrl,
+                this.siteURI,
+                this.workerCount,
+                this.sleepTime,
+                this.timeout,
+                this.siteHeight,
+                this.maxChildLinks,
+                this.reportToFile
+        );
     }
 }

@@ -22,12 +22,14 @@ public class CrawlerAppTest {
 
     private static final PriorityQueue<CrawledNode> EMPTY_PQ = new PriorityQueue<>();
 
-    DownloadService downloadServiceMock = Mockito.mock(DownloadService.class);
+    DownloadService downloadServiceMock;
 
-    Supplier<Downloader<HttpResponse<String>>> downloadServiceSupplier = () -> downloadServiceMock;
+    Supplier<Downloader<HttpResponse<String>>> downloadServiceSupplier;
 
     @BeforeEach
     public void setup(){
+        downloadServiceMock = Mockito.mock(DownloadService.class);
+        downloadServiceSupplier = () -> downloadServiceMock;
         TestUtils.cleanReportsFolder();
         Mockito.when(downloadServiceMock.download("http://localhost:8000/"))
                 .thenReturn(TestUtils.getFutureResponseOF("site/index.html"));
@@ -160,7 +162,7 @@ public class CrawlerAppTest {
         CrawlerApp underTest = new CrawlerApp(CrawlerAppConfigBuilder.newBuilder(domain)
                 .withWorkerCount(1)
                 .withSleepWorkerTime(3)
-                .withMaxExecutionTime(2)
+                .withMaxExecutionTime(1)
                 .build());
 
         CrawlSiteResponse actualResponse = underTest.crawlSite(downloadServiceSupplier);
@@ -170,8 +172,8 @@ public class CrawlerAppTest {
 
         Mockito.verify(downloadServiceMock, Mockito.times(1)).download(domain);
 
-        Assertions.assertEquals(actualResponse.getTotalRedirects(), 0);
-        Assertions.assertEquals(actualResponse.getTotalFailures(), 1);
+        MatcherAssert.assertThat(actualResponse.getTotalRedirects(), Matchers.is(0));
+        MatcherAssert.assertThat(actualResponse.getTotalFailures(), Matchers.is(1)); // no time to fail since it was shut down
         MatcherAssert.assertThat(actualResponse.getTotalTime(), Matchers.lessThanOrEqualTo(6.0));
         Assertions.assertEquals(graph.size(), 1);
         Assertions.assertTrue(graph.containsKey(CrawledNode.ROOT_NODE_PARENT_ID));
@@ -183,13 +185,15 @@ public class CrawlerAppTest {
 
     @Test
     public void should_build_report_file() {
-        String domain = "http://localhost:8000";
+        String domain = "http://localhost:8000/";
         CrawlerApp underTest = new CrawlerApp(CrawlerAppConfigBuilder.newBuilder(domain)
                 .withWorkerCount(1)
                 .withSleepWorkerTime(0.1)
+                .withMaxExecutionTime(10)
                 .withReportToFile(true)
                 .build());
         underTest.start();
+
         Assertions.assertTrue(TestUtils.reportFileWasCreated(underTest.getConfig().siteURI));
     }
 
