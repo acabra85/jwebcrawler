@@ -8,14 +8,15 @@ A webcrawler made in java
 Download the source code and execute the following command inside the **root folder** 'jwebcrawler'
 
 ## Command
-1. Execute this ```./mvnw clean install; java -jar target/jwebcrawler-1.0-SNAPSHOT.jar <SUB_DOMAIN> {WORKER_COUNT} {WORKER_AWAIT_TIME} {TOTAL_TIMEOUT} {PRINT_RESULTS_TO_FILE}```
+1. Execute this ```./mvnw clean install; java -jar target/jwebcrawler-1.0-SNAPSHOT.jar <SUB_DOMAIN> {WORKER_COUNT} {WORKER_AWAIT_TIME} {TOTAL_TIMEOUT} {PRINT_RESULTS_TO_FILE} {MAX_SITE_NODE_LINKS} {MAX_SITE_HEIGHT}```
 * **<SUB_DOMAIN>** is the uri of the root sub-domain you want to crawl. (Mandatory)
 * **{WORKER_COUNT}** is the total amount of desired concurrent workers. **See notes below** (Optional, 
 Default: Available cores returned by Java Virtual Machine)
 * **{WORKER_AWAIT_TIME}** is the total amount of time in seconds a worker should wait before retrying. (Optional, Default: 1 second)
 * **{TOTAL_TIMEOUT}** is the total amount of time in seconds a worker should wait before retrying. (Optional, Default: 1 second)
 * **{PRINT_RESULTS_TO_FILE}** Request to print results to a file that will be located in the results/ folder (Optional, Default: false)
-
+* **{MAX_SITE_NODE_LINKS}** if 0 does not limit the children count per node (Optional, default 10)
+* **{MAX_SITE_HEIGHT}** if 0 does not limit the height of the tree site (Optional, default 6)
 ### e.g. 
 ```./mvnw clean install; java -jar target/jwebcrawler-1.0-SNAPSHOT.jar http://localhost:8000```
 ## Output
