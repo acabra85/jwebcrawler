@@ -4,11 +4,11 @@ import java.net.URL;
 
 public class CrawlerAppConfig {
 
-    private final static Long MIN_SLEEP_TIME = 100L;
     private final static Long MAX_SLEEP_TIME = 10000L;
     private final static int MAX_WORKER_COUNT = 50;
     private static final int MAX_CHILD_PER_PAGE = 100;
     private static final int MAX_DEPTH = 10;
+    private static final Long MAX_EXECUTION_TIME = 300000L; // 5 minutes max execution time
 
     public final URL rootUrl;
     public final boolean reportToFile;
@@ -17,7 +17,6 @@ public class CrawlerAppConfig {
     public final long timeout;
     public final int siteHeight;
     public final int maxChildLinks;
-    public final boolean isStoppable;
     public final String startUri;
     public final String siteURI;
 
@@ -33,7 +32,6 @@ public class CrawlerAppConfig {
         this.siteHeight = siteHeight;
         this.maxChildLinks = maxSiteNodeLinks;
         this.reportToFile = reportToFile;
-        this.isStoppable = this.timeout > 0;
     }
 
     public static CrawlerAppConfig of(URL rootUrl, int workerCount, double sleepTime, double maxExecutionTime,
@@ -43,8 +41,8 @@ public class CrawlerAppConfig {
                 rootUrl,
                 String.format("%s://%s", rootUrl.getProtocol(), rootUrl.getAuthority()),
                 Math.min(MAX_WORKER_COUNT, Math.max(workerCount, 1)),
-                Math.min(MAX_SLEEP_TIME, Math.max(totalSleepTime, MIN_SLEEP_TIME)),
-                Double.valueOf(maxExecutionTime * 1000).longValue(),
+                Math.min(MAX_SLEEP_TIME, Math.max(0, totalSleepTime)),
+                Math.max(1000L, Math.min(MAX_EXECUTION_TIME, Double.valueOf(maxExecutionTime * 1000).longValue())),
                 siteHeight <= 0 ? 0 : Math.min(siteHeight, MAX_DEPTH),
                 maxSiteNodeLinks <= 0 ? 0 : Math.min(maxSiteNodeLinks, MAX_CHILD_PER_PAGE),
                 reportToFile);
@@ -60,7 +58,6 @@ public class CrawlerAppConfig {
                 ", timeout=" + timeout +
                 ", siteHeight=" + siteHeight +
                 ", maxChildLinks=" + maxChildLinks +
-                ", isStoppable=" + isStoppable +
                 ", startUri='" + startUri + '\'' +
                 ", siteURI='" + siteURI + '\'' +
                 '}';

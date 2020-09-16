@@ -28,7 +28,6 @@ public class CrawlerCoordinator {
     private final Set<String> failureLinks = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
     private final AtomicInteger ids = new AtomicInteger();
     private final Map<Long, Set<CrawledNode>> graph = new HashMap<>();
-    private boolean jobDone = false;
 
     CrawlerCoordinator() {
     }
@@ -80,14 +79,6 @@ public class CrawlerCoordinator {
         return this.redirects.getOrDefault(link, link);
     }
 
-    public synchronized boolean isJobDone() {
-        return jobDone;
-    }
-
-    public synchronized void requestJobDone() {
-        this.jobDone = true;
-    }
-
     public int getTotalRedirects() {
         return this.redirects.size();
     }
@@ -95,4 +86,5 @@ public class CrawlerCoordinator {
     public int getTotalFailures() {
         return this.failureLinks.size();
     }
+
 }

@@ -14,7 +14,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
 import org.slf4j.Logger;
@@ -22,6 +21,8 @@ import org.slf4j.LoggerFactory;
 
 public class CrawlerApp {
 
+    public static final long POISON_PILL_ID = Integer.MIN_VALUE;
+    public static final CrawledNode POISON_PILL = new CrawledNode("", POISON_PILL_ID);
     private final Logger logger = LoggerFactory.getLogger(CrawlerApp.class);
     private final long startedAt = System.currentTimeMillis();
     private final CrawlerAppConfig config;
@@ -35,25 +36,30 @@ public class CrawlerApp {
         return new CrawlerApp(CrawlerAppConfigBuilder.newBuilder(args).build());
     }
 
-    private void evaluateTimeout(CrawlerCoordinator coordinator) {
-        new Thread(() -> {
+    private Runnable buildCrawlTerminator(BlockingQueue<CrawledNode> queue, ExecutorService ex) {
+        return () -> {
             try {
                 Thread.sleep(config.timeout);
                 logger.info("Application has reached timeout ... requesting workers to stop");
-                coordinator.requestJobDone();
+                IntStream.range(0, this.config.workerCount)
+                        .forEach(i-> {
+                            logger.info("sending poison pill #: " + (i+1));
+                            queue.offer(CrawlerApp.POISON_PILL);
+                        });
+                if(!ex.isShutdown()) {
+                    Thread.sleep(100L);
+                    ex.shutdownNow();
+                }
             } catch (InterruptedException e) {
                 logger.error(e.getMessage());
             }
-        }).start();
+        };
     }
 
     protected CrawlSiteResponse crawlSite(Supplier<Downloader<HttpResponse<String>>> supplier) {
         logger.info(String.format("Will attempt crawl for pages of SubDomain :<%s>", this.config.siteURI));
 
         BlockingQueue<CrawledNode> queue = new LinkedBlockingQueue<>();
-
-        //create a lock for the queue
-        ReentrantLock queueLock = new ReentrantLock(true);
 
         // enqueue the first website
         ExecutorService executorService = Executors.newFixedThreadPool(config.workerCount);
@@ -62,12 +68,13 @@ public class CrawlerApp {
 
         queue.offer(new CrawledNode(config.startUri, coordinator.getNextId()));
 
-        List<Runnable> tasks = buildTasks(queue, queueLock, coordinator, supplier);
+        List<Runnable> tasks = buildTasks(queue, coordinator, supplier);
         CompletableFuture<?>[] completableFutures = tasks.stream()
                 .map(task -> CompletableFuture.runAsync(task, executorService))
                 .toArray(CompletableFuture[]::new);
 
-        if (config.isStoppable) evaluateTimeout(coordinator);
+        new Thread(buildCrawlTerminator(queue, executorService)).start();//dispatch crawl terminator
+
         CompletableFuture.allOf(completableFutures).join();
         executorService.shutdown();
         double totalRunningInSeconds = (System.currentTimeMillis() - this.startedAt) / 1000.0d;
@@ -77,18 +84,17 @@ public class CrawlerApp {
                 totalRunningInSeconds);
     }
 
-    private List<Runnable> buildTasks(BlockingQueue<CrawledNode> queue, ReentrantLock queueLock,
-                                      CrawlerCoordinator coordinator,
+    private List<Runnable> buildTasks(BlockingQueue<CrawledNode> queue, CrawlerCoordinator coordinator,
                                       Supplier<Downloader<HttpResponse<String>>> supplier) {
         List<Runnable> tasks = new ArrayList<>();
         IntStream.range(0, this.config.workerCount).forEach(i ->
-                tasks.add(new CrawlConsumerWorker(queue, coordinator, queueLock, supplier.get(), this.config.copy()))
+                tasks.add(new CrawlConsumerWorker(queue, coordinator, supplier.get(), this.config.copy()))
         );
         return tasks;
     }
 
     public void start() {
-        CrawlSiteResponse siteResponse = crawlSite(DownloadService::new);
+        CrawlSiteResponse siteResponse = crawlSite(() -> new DownloadService<>(this.config.siteURI));
         new CrawlerReporter().report(this.config.reportToFile, siteResponse, "" + System.currentTimeMillis());
     }
 

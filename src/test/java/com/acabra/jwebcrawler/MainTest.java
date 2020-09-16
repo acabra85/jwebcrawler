@@ -13,6 +13,6 @@ class MainTest {
 
     @Test
     public void should_succeed_main() {
-        Main.main("http://localhost:8000");
+        Main.main("http://localhost:8000", "0.25", "5");
     }
 }

@@ -34,12 +34,11 @@ public class CrawlProducerWorker implements Runnable {
         this.queue = queue;
         this.httpResponse = httpResponse;
         this.node = node;
-        logger.info("process: " + node.url);
+        //logger.info("process: " + node.url);
     }
 
     private ProcessedResponse processHTTPResponse(CrawledNode node, HttpResponse<String> httpResponse) {
         String uri = node.url;
-        coordinator.processNode(node);
         if (null != httpResponse && isResponseHtml(httpResponse.headers())) {
             int statusCode = httpResponse.statusCode();
             List<String> links = EMPTY_RESPONSE;
@@ -114,22 +113,18 @@ public class CrawlProducerWorker implements Runnable {
 
     private boolean allowEnqueue(int level, String link) {
         if (this.config.siteHeight > 0) {
-            return coordinator.allowLink(link) && this.config.siteHeight >= level;
+            return this.config.siteHeight >= level && coordinator.allowLink(link);
         }
         return coordinator.allowLink(link);
     }
 
     @Override
     public void run() {
-        logger.info("CrawlProducerWorker Starts...");
         try {
             ProcessedResponse processedResponse = processHTTPResponse(this.node, this.httpResponse);
             enqueueLocalDomainLinksFound(node, processedResponse);
         } catch (Exception e) {
             logger.error(e.getMessage());
-        }
-        finally {
-            logger.info("CrawlProducerWorker Worker done...");
         }
     }
 }

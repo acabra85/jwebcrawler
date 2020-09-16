@@ -14,15 +14,18 @@ public class DownloadService<E> implements Downloader<E> {
 
     private static final Logger logger = LoggerFactory.getLogger(DownloadService.class);
     private final HttpClient client;
+    private static final HttpResponse.BodyHandler<String> STRING_BODY_HANDLER = HttpResponse.BodyHandlers.ofString();
 
-    public DownloadService() {
+    public DownloadService(String siteURI) {
         this.client = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(4)).build();
+        this.client.sendAsync(buildHttpRequest(siteURI), STRING_BODY_HANDLER)
+                .handle((r, ex) -> r).join(); //warm up connection ignore results
     }
 
     @SuppressWarnings("unchecked")
     public CompletableFuture<E> download(String url) {
-        return client.sendAsync(buildHttpRequest(url), HttpResponse.BodyHandlers.ofString())
+        return client.sendAsync(buildHttpRequest(url), STRING_BODY_HANDLER)
                 .handle((res, ex) -> {
                     if(res == null) {
                         logger.error(ex.getMessage());

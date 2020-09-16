@@ -97,19 +97,19 @@ class CrawlerAppConfigBuilder {
                 .withReportToFile(Boolean.parseBoolean(reportToFile));
     }
 
-    private CrawlerAppConfigBuilder of(String subDomainStr, String reqThreadCountStr, String reqSleepThreadTime, String maxExecutionTime) {
-        return of(subDomainStr, reqThreadCountStr, reqSleepThreadTime)
-                .withMaxExecutionTime(Double.parseDouble(maxExecutionTime));
-    }
-
-    private CrawlerAppConfigBuilder of(String subDomainStr, String reqThreadCountStr, String reqSleepThreadTime) {
-        return of(subDomainStr, reqThreadCountStr)
+    private CrawlerAppConfigBuilder of(String subDomainStr, String maxExecutionTime, String reqThreadCountStr, String reqSleepThreadTime) {
+        return of(subDomainStr, maxExecutionTime, reqThreadCountStr)
                 .withSleepWorkerTime(Double.parseDouble(reqSleepThreadTime));
     }
 
-    private CrawlerAppConfigBuilder of(String subDomainStr, String reqThreadCountStr) {
-        return of(subDomainStr)
+    private CrawlerAppConfigBuilder of(String subDomainStr, String maxExecutionTime, String reqThreadCountStr) {
+        return of(subDomainStr, maxExecutionTime)
                 .withWorkerCount(Integer.parseInt(reqThreadCountStr));
+    }
+
+    private CrawlerAppConfigBuilder of(String subDomainStr, String maxExecutionTime) {
+        return of(subDomainStr)
+                .withMaxExecutionTime(Double.parseDouble(maxExecutionTime));
     }
 
     private CrawlerAppConfigBuilder of(String subDomainStr) {

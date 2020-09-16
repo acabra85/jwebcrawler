@@ -8,12 +8,11 @@ A webcrawler made in java
 Download the source code and execute the following command inside the **root folder** 'jwebcrawler'
 
 ## Command
-1. Execute this ```./mvnw clean install; java -jar target/jwebcrawler-1.0-SNAPSHOT.jar <SUB_DOMAIN> {WORKER_COUNT} {WORKER_AWAIT_TIME} {TOTAL_TIMEOUT} {PRINT_RESULTS_TO_FILE} {MAX_SITE_NODE_LINKS} {MAX_SITE_HEIGHT}```
+1. Execute this ```./mvnw clean install; java -jar target/jwebcrawler-2.0-SNAPSHOT.jar <SUB_DOMAIN> {TOTAL_TIMEOUT} {WORKER_COUNT} {WORKER_AWAIT_TIME} {PRINT_RESULTS_TO_FILE} {MAX_SITE_NODE_LINKS} {MAX_SITE_HEIGHT}```
 * **<SUB_DOMAIN>** is the uri of the root sub-domain you want to crawl. (Mandatory)
-* **{WORKER_COUNT}** is the total amount of desired concurrent workers. **See notes below** (Optional, 
-Default: Available cores returned by Java Virtual Machine)
-* **{WORKER_AWAIT_TIME}** is the total amount of time in seconds a worker should wait before retrying. (Optional, Default: 1 second)
-* **{TOTAL_TIMEOUT}** is the total amount of time in seconds a worker should wait before retrying. (Optional, Default: 1 second)
+* **{TOTAL_TIMEOUT}** is the total amount of time in seconds a worker should wait before retrying. (Optional, Default: 30 seconds)
+* **{WORKER_COUNT}** is the total amount of desired concurrent workers. **See notes below** (Optional, Default: 1)
+* **{WORKER_AWAIT_TIME}** is the total amount of time in seconds a worker should wait after an item was processed from the queue. (Optional, Default: 1 second)
 * **{PRINT_RESULTS_TO_FILE}** Request to print results to a file that will be located in the results/ folder (Optional, Default: false)
 * **{MAX_SITE_NODE_LINKS}** if 0 does not limit the children count per node (Optional, default 10)
 * **{MAX_SITE_HEIGHT}** if 0 does not limit the height of the tree site (Optional, default 6)
@@ -45,22 +44,21 @@ this case http://localhost:8000.
  
  
 ## Notes
-The worker crawling mechanism is based on Idle Budget strategy, where a worker gets an initial (8) amount of idle units
-and every time a task is completed it is awarded additional idle units (2).
-If there is no work available (idle worker) the worker will redeem one idle unit from his budget and sleep a given time 
-before retrying again.
+The worker crawling mechanism is based on simple consumer-producer queue. A fix set amount of workers are created and 
+once a timeout is reached they are terminated using a POISON_PILL mechanism, that indicates the thread to complete the loop
+of execution.
 
-The idea is that if a worker retried/waited enough time without being able to perform any work he can exit gracefully.
-And if he was able to complete a task additional working units are awarded (since processing one task will generate
-more work e.g. The html is downloaded and contains links that have not been crawled).
+There are multiple things to consider further in terms of failures:
+1. Most websites have in place throttling, ideally the crawler should adapt for this when receiving 429 http status code as response.
+2. Multiple filters can be created for URLs, this case is set for SameSite urls but this can be extended easily with a dedicated Filter interface and the decorator pattern.
 
 ## Defaults
 The file ```/src/main/resources/config.json``` contains the defaults for execution
 ```
 {
+     "maxExecutionTime": 0, // by default there is no limit, in seconds 
      "workerCount": 1, // total workers
      "sleepTime": 1, // sleep time of workers before retry on an empty queue (seconds)
-     "maxExecutionTime": 0, // by default there is no limit, in seconds 
      "siteHeight": 6, // how deep to traverse the site-tree
      "maxSiteNodeLinks": 10 // how many maximum children per tree-site-node
      "reportToFile": false // should print report to a file (by default prints to console) 

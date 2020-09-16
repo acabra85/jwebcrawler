@@ -55,7 +55,7 @@ public class CrawlerAppTest {
                 .thenReturn(TestUtils.getFutureRedirectResponse());
         Mockito.when(downloadServiceMock.download("http://localhost:8000/mypdffile.pdf"))
                 .thenReturn(TestUtils.getFuturePDFResponse());
-        Mockito.when(downloadServiceMock.download("http://delayed-website.com"))
+        Mockito.when(downloadServiceMock.download("http://5-secs-delayed-website.com"))
                 .thenAnswer((invocationOnMock) -> {
                     Thread.sleep(5000L);
                     return TestUtils.getFutureEmptyResponse();
@@ -68,7 +68,8 @@ public class CrawlerAppTest {
         int maxSiteNodeLinks = 2;
         CrawlerApp crawlerApp = new CrawlerApp(CrawlerAppConfigBuilder.newBuilder("http://localhost:8000/")
                 .withSleepWorkerTime(0.1)
-                .withWorkerCount(4)
+                .withWorkerCount(1)
+                .withMaxExecutionTime(5)
                 .withMaxTreeSiteHeight(expectedSiteMaxHeight)
                 .withMaxSiteNodeLinks(maxSiteNodeLinks)
                 .build());
@@ -103,6 +104,7 @@ public class CrawlerAppTest {
                 .withWorkerCount(1)
                 .withMaxTreeSiteHeight(expectedSiteMaxHeight)
                 .withMaxSiteNodeLinks(maxSiteNodeLinks)
+                .withMaxExecutionTime(5)
                 .build());
         CrawlSiteResponse crawlSiteResponse = crawlerApp.crawlSite(downloadServiceSupplier);
         Map<Long, PriorityQueue<CrawledNode>> graph = crawlSiteResponse.getGraph();
@@ -134,6 +136,7 @@ public class CrawlerAppTest {
                 .withWorkerCount(1)
                 .withMaxTreeSiteHeight(maxTreeSiteHeight)
                 .withMaxSiteNodeLinks(maxSiteNodeLinks)
+                .withMaxExecutionTime(5)
                 .build());
         CrawlSiteResponse crawlSiteResponse = crawlerApp.crawlSite(downloadServiceSupplier);
         Map<Long, PriorityQueue<CrawledNode>> graph = crawlSiteResponse.getGraph();
@@ -158,7 +161,7 @@ public class CrawlerAppTest {
 
     @Test
     public void should_interrupt_execution() {
-        String domain = "http://delayed-website.com";
+        String domain = "http://5-secs-delayed-website.com";
         CrawlerApp underTest = new CrawlerApp(CrawlerAppConfigBuilder.newBuilder(domain)
                 .withWorkerCount(1)
                 .withSleepWorkerTime(3)
@@ -173,7 +176,7 @@ public class CrawlerAppTest {
         Mockito.verify(downloadServiceMock, Mockito.times(1)).download(domain);
 
         MatcherAssert.assertThat(actualResponse.getTotalRedirects(), Matchers.is(0));
-        MatcherAssert.assertThat(actualResponse.getTotalFailures(), Matchers.is(1)); // no time to fail since it was shut down
+        MatcherAssert.assertThat(actualResponse.getTotalFailures(), Matchers.is(0)); // no time to fail since it was shut down
         MatcherAssert.assertThat(actualResponse.getTotalTime(), Matchers.lessThanOrEqualTo(6.0));
         Assertions.assertEquals(graph.size(), 1);
         Assertions.assertTrue(graph.containsKey(CrawledNode.ROOT_NODE_PARENT_ID));
@@ -189,7 +192,7 @@ public class CrawlerAppTest {
         CrawlerApp underTest = new CrawlerApp(CrawlerAppConfigBuilder.newBuilder(domain)
                 .withWorkerCount(1)
                 .withSleepWorkerTime(0.1)
-                .withMaxExecutionTime(10)
+                .withMaxExecutionTime(5)
                 .withReportToFile(true)
                 .build());
         underTest.start();
@@ -203,6 +206,7 @@ public class CrawlerAppTest {
         CrawlerApp underTest = new CrawlerApp(CrawlerAppConfigBuilder.newBuilder(domain)
                 .withWorkerCount(1)
                 .withSleepWorkerTime(0.1)
+                .withMaxExecutionTime(5)
                 .build());
         underTest.start();
         Assertions.assertFalse(TestUtils.reportFileWasCreated(underTest.getConfig().siteURI));
