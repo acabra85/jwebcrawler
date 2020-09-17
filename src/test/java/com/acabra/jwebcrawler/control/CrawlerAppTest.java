@@ -55,9 +55,9 @@ public class CrawlerAppTest {
                 .thenReturn(TestUtils.getFutureRedirectResponse());
         Mockito.when(downloadServiceMock.download("http://localhost:8000/mypdffile.pdf"))
                 .thenReturn(TestUtils.getFuturePDFResponse());
-        Mockito.when(downloadServiceMock.download("http://5-secs-delayed-website.com"))
+        Mockito.when(downloadServiceMock.download("http://8-secs-delayed-website.com"))
                 .thenAnswer((invocationOnMock) -> {
-                    Thread.sleep(5000L);
+                    Thread.sleep(8000L);
                     return TestUtils.getFutureEmptyResponse();
                 });
     }
@@ -120,7 +120,7 @@ public class CrawlerAppTest {
         Mockito.verify(downloadServiceMock, Mockito.times(0)).download("http://localhost:8000/a8.html");
         Mockito.verify(downloadServiceMock, Mockito.times(0)).download("http://localhost:8000/a9.html");
 
-        Assertions.assertEquals(crawlSiteResponse.getTotalFailures(), 0);
+        MatcherAssert.assertThat(crawlSiteResponse.getTotalFailures(), Matchers.is(1));
         Assertions.assertEquals(crawlSiteResponse.getTotalRedirects(), 0);
         Assertions.assertTrue(graph.containsKey(CrawledNode.ROOT_NODE_PARENT_ID));
         MatcherAssert.assertThat(calculateActualMaxChildren(graph), Matchers.lessThanOrEqualTo(maxSiteNodeLinks));
@@ -161,11 +161,11 @@ public class CrawlerAppTest {
 
     @Test
     public void should_interrupt_execution() {
-        String domain = "http://5-secs-delayed-website.com";
+        String domain = "http://8-secs-delayed-website.com";
         CrawlerApp underTest = new CrawlerApp(CrawlerAppConfigBuilder.newBuilder(domain)
                 .withWorkerCount(1)
                 .withSleepWorkerTime(3)
-                .withMaxExecutionTime(1)
+                .withMaxExecutionTime(0.01)
                 .build());
 
         CrawlSiteResponse actualResponse = underTest.crawlSite(downloadServiceSupplier);
@@ -176,8 +176,9 @@ public class CrawlerAppTest {
         Mockito.verify(downloadServiceMock, Mockito.times(1)).download(domain);
 
         MatcherAssert.assertThat(actualResponse.getTotalRedirects(), Matchers.is(0));
-        MatcherAssert.assertThat(actualResponse.getTotalFailures(), Matchers.is(0)); // no time to fail since it was shut down
-        MatcherAssert.assertThat(actualResponse.getTotalTime(), Matchers.lessThanOrEqualTo(6.0));
+
+        // no time to fail since it was shut down while waiting
+        MatcherAssert.assertThat(actualResponse.getTotalFailures(), Matchers.is(0));
         Assertions.assertEquals(graph.size(), 1);
         Assertions.assertTrue(graph.containsKey(CrawledNode.ROOT_NODE_PARENT_ID));
         MatcherAssert.assertThat(graph.get(CrawledNode.ROOT_NODE_PARENT_ID), Matchers.contains(expectedRootNode));

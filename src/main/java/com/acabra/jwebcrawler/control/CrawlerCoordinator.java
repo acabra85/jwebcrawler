@@ -8,8 +8,14 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.LongAdder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class is thread safe, as all of its attributes are final and the public methods are either atomic
@@ -22,14 +28,20 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class CrawlerCoordinator {
 
+
+    private final Logger logger = LoggerFactory.getLogger(CrawlerCoordinator.class);
     private static final Comparator<CrawledNode> PATH_COMPARATOR = (n1, n2) -> n2.url.compareTo(n1.url);
     private final Set<String> visited =  Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
     private final ConcurrentHashMap<String, String> redirects = new ConcurrentHashMap<>();
     private final Set<String> failureLinks = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
     private final AtomicInteger ids = new AtomicInteger();
     private final Map<Long, Set<CrawledNode>> graph = new HashMap<>();
+    private final ExecutorService ex;
+    private LongAdder rejections = new LongAdder();
+    private volatile boolean jobDone = false;
 
-    CrawlerCoordinator() {
+    CrawlerCoordinator(ExecutorService executorService) {
+        this.ex = executorService;
     }
 
     /**
@@ -67,8 +79,8 @@ public class CrawlerCoordinator {
         return Collections.unmodifiableMap(map);
     }
 
-    public synchronized void reportFailureLink(String url) {
-        this.failureLinks.add(url);
+    public synchronized boolean reportFailureLink(String url) {
+        return this.failureLinks.add(url);
     }
 
     public void reportRedirect(String url, String redirectUri) {
@@ -87,4 +99,27 @@ public class CrawlerCoordinator {
         return this.failureLinks.size();
     }
 
+    public void dispatchProducer(CrawlProducerWorker producer) {
+        if (!jobDone) {
+            try {
+                CompletableFuture.runAsync(producer, ex);
+            } catch (RejectedExecutionException ex) {
+                rejections.increment();
+            }
+        } else {
+            rejections.increment();
+        }
+    }
+
+    public void requestJobDone() {
+        this.jobDone = true;
+    }
+
+    public Long getTotalEnqueueRejections() {
+        return rejections.sum();
+    }
+
+    public boolean isJobDone() {
+        return jobDone;
+    }
 }

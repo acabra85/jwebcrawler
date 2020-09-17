@@ -16,17 +16,22 @@ public class DownloadService<E> implements Downloader<E> {
     private final HttpClient client;
     private static final HttpResponse.BodyHandler<String> STRING_BODY_HANDLER = HttpResponse.BodyHandlers.ofString();
 
-    public DownloadService(String siteURI) {
-        this.client = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(4)).build();
+    DownloadService(HttpClient client, String siteURI) {
+        this.client = client;
         this.client.sendAsync(buildHttpRequest(siteURI), STRING_BODY_HANDLER)
                 .handle((r, ex) -> r).join(); //warm up connection ignore results
+    }
+
+    public static DownloadService<HttpResponse<String>> of(String siteURI) {
+        HttpClient client = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(4)).build();
+        return new DownloadService<>(client, siteURI);
     }
 
     @SuppressWarnings("unchecked")
     public CompletableFuture<E> download(String url) {
         return client.sendAsync(buildHttpRequest(url), STRING_BODY_HANDLER)
-                .handle((res, ex) -> {
+                .handleAsync((res, ex) -> {
                     if(res == null) {
                         logger.error(ex.getMessage());
                     }

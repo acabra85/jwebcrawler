@@ -25,11 +25,11 @@ public class CrawledNode {
         this.parentId = parentId;
     }
 
-    public CrawledNode buildChild(String link, int nextId) {
+    public CrawledNode buildChild(String link, long nextId) {
         return new CrawledNode(link, nextId, this.level + 1, this.id);
     }
 
-    public CrawledNode redirection(String redirectURI, int nextId) {
+    public CrawledNode redirection(String redirectURI, long nextId) {
         return new CrawledNode(redirectURI, nextId, this.level, this.parentId);
     }
 

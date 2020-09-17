@@ -7,6 +7,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,7 +40,9 @@ public class JsonHelper {
 
     private static String getFileContents(String fileName) throws IOException {
         InputStream resourceAsStream = Objects.requireNonNull(JsonHelper.class.getClassLoader().getResourceAsStream(fileName));
-        BufferedReader br = new BufferedReader(new InputStreamReader(resourceAsStream));
-        return br.readLine();
+        BufferedReader br = new BufferedReader(new InputStreamReader(resourceAsStream, StandardCharsets.UTF_8));
+        String jsonLine = br.readLine();
+        br.close();
+        return jsonLine;
     }
 }

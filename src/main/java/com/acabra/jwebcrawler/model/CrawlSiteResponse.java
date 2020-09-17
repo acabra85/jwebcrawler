@@ -8,16 +8,21 @@ public class CrawlSiteResponse {
     final Map<Long, PriorityQueue<CrawledNode>> graph;
     final int totalRedirects;
     final int totalFailures;
-    final public double totalTime;
+    private final double totalTime;
     private final String siteURI;
+    private final Long rejections;
+    private final int workerCount;
+
 
     public CrawlSiteResponse(String siteURI, Map<Long, PriorityQueue<CrawledNode>> graph, int totalRedirects,
-                             int totalFailures, double totalTime) {
+                             int totalFailures, Long rejections, double totalTime, int workerCount) {
         this.siteURI = siteURI;
         this.graph = graph;
         this.totalRedirects = totalRedirects;
         this.totalFailures = totalFailures;
+        this.rejections = rejections;
         this.totalTime = totalTime;
+        this.workerCount = workerCount;
     }
 
     public Map<Long, PriorityQueue<CrawledNode>> getGraph() {
@@ -38,5 +43,13 @@ public class CrawlSiteResponse {
 
     public String getSiteURI() {
         return siteURI;
+    }
+
+    public long getRejections() {
+        return rejections;
+    }
+
+    public int getWorkerCount() {
+        return workerCount;
     }
 }

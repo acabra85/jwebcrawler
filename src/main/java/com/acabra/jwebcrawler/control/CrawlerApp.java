@@ -6,23 +6,21 @@ import com.acabra.jwebcrawler.model.CrawlerAppConfig;
 import com.acabra.jwebcrawler.service.DownloadService;
 import com.acabra.jwebcrawler.service.Downloader;
 import com.acabra.jwebcrawler.view.CrawlerReporter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.*;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class CrawlerApp {
 
     public static final long POISON_PILL_ID = Integer.MIN_VALUE;
     public static final CrawledNode POISON_PILL = new CrawledNode("", POISON_PILL_ID);
+    private static final double PERCENTAGE_CONSUMERS = 0.8;
     private final Logger logger = LoggerFactory.getLogger(CrawlerApp.class);
     private final long startedAt = System.currentTimeMillis();
     private final CrawlerAppConfig config;
@@ -36,65 +34,62 @@ public class CrawlerApp {
         return new CrawlerApp(CrawlerAppConfigBuilder.newBuilder(args).build());
     }
 
-    private Runnable buildCrawlTerminator(BlockingQueue<CrawledNode> queue, ExecutorService ex) {
-        return () -> {
-            try {
-                Thread.sleep(config.timeout);
-                logger.info("Application has reached timeout ... requesting workers to stop");
-                IntStream.range(0, this.config.workerCount)
-                        .forEach(i-> {
-                            logger.info("sending poison pill #: " + (i+1));
-                            queue.offer(CrawlerApp.POISON_PILL);
-                        });
-                if(!ex.isShutdown()) {
-                    Thread.sleep(100L);
-                    ex.shutdownNow();
-                }
-            } catch (InterruptedException e) {
-                logger.error(e.getMessage());
-            }
-        };
-    }
-
     protected CrawlSiteResponse crawlSite(Supplier<Downloader<HttpResponse<String>>> supplier) {
         logger.info(String.format("Will attempt crawl for pages of SubDomain :<%s>", this.config.siteURI));
 
-        BlockingQueue<CrawledNode> queue = new LinkedBlockingQueue<>();
 
-        // enqueue the first website
-        ExecutorService executorService = Executors.newFixedThreadPool(config.workerCount);
+        //allow other 80% of capacity of the executor for Producers.
+        ExecutorService executorService = Executors.newFixedThreadPool(Math.max(2, config.workerCount));
 
-        final CrawlerCoordinator coordinator = new CrawlerCoordinator();
+        final CrawlerCoordinator coordinator = new CrawlerCoordinator(executorService);
 
-        queue.offer(new CrawledNode(config.startUri, coordinator.getNextId()));
+        BlockingQueue<CrawledNode> queue = new LinkedBlockingQueue<>(){{
+            // enqueue the first website
+            add(new CrawledNode(config.startUri, coordinator.getNextId()));
+        }};
 
-        List<Runnable> tasks = buildTasks(queue, coordinator, supplier);
+        int totalConsumers = Double.valueOf(
+                Math.max(1, Math.floor(this.config.workerCount * PERCENTAGE_CONSUMERS))
+        ).intValue();
+        logger.info("total consumer crawlers: " + totalConsumers);
+
+        List<Runnable> tasks = buildTasks(queue, coordinator, supplier, totalConsumers);
         CompletableFuture<?>[] completableFutures = tasks.stream()
                 .map(task -> CompletableFuture.runAsync(task, executorService))
                 .toArray(CompletableFuture[]::new);
 
-        new Thread(buildCrawlTerminator(queue, executorService)).start();//dispatch crawl terminator
+        dispatchCrawlTerminator(queue, executorService, coordinator, totalConsumers);
 
         CompletableFuture.allOf(completableFutures).join();
         executorService.shutdown();
+
         double totalRunningInSeconds = (System.currentTimeMillis() - this.startedAt) / 1000.0d;
         return new CrawlSiteResponse(this.config.siteURI, coordinator.getGraph(),
                 coordinator.getTotalRedirects(),
                 coordinator.getTotalFailures(),
-                totalRunningInSeconds);
+                coordinator.getTotalEnqueueRejections(),
+                totalRunningInSeconds,
+                this.config.workerCount);
+    }
+
+    private void dispatchCrawlTerminator(BlockingQueue<CrawledNode> queue, ExecutorService executorService,
+                                         CrawlerCoordinator coordinator, int totalConsumers) {
+        new Thread(
+                new CrawlTerminator(queue, executorService, coordinator, totalConsumers, this.config.timeout)
+            ).start();//dispatch crawl terminator
     }
 
     private List<Runnable> buildTasks(BlockingQueue<CrawledNode> queue, CrawlerCoordinator coordinator,
-                                      Supplier<Downloader<HttpResponse<String>>> supplier) {
+                                      Supplier<Downloader<HttpResponse<String>>> supplier, int totalConsumers) {
         List<Runnable> tasks = new ArrayList<>();
-        IntStream.range(0, this.config.workerCount).forEach(i ->
+        IntStream.range(0, totalConsumers).forEach(i ->
                 tasks.add(new CrawlConsumerWorker(queue, coordinator, supplier.get(), this.config.copy()))
         );
         return tasks;
     }
 
     public void start() {
-        CrawlSiteResponse siteResponse = crawlSite(() -> new DownloadService<>(this.config.siteURI));
+        CrawlSiteResponse siteResponse = crawlSite(() -> DownloadService.of(this.config.siteURI));
         new CrawlerReporter().report(this.config.reportToFile, siteResponse, "" + System.currentTimeMillis());
     }
 

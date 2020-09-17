@@ -14,7 +14,6 @@ import java.util.PriorityQueue;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -56,7 +55,7 @@ class CrawlerReporterTest {
     @Test
     public void should_build_empty_report() {
         String actualReport = underTest
-                .buildReport(new CrawlSiteResponse(SUB_DOMAIN, Collections.emptyMap(), 0, 0, 0.5), stringAppender)
+                .buildReport(new CrawlSiteResponse(SUB_DOMAIN, Collections.emptyMap(), 0, 0, 0L, 0.5, 0), stringAppender)
                 .get();
         MatcherAssert.assertThat(actualReport, Matchers.is(CrawlerReporter.EMPTY_REPORT_CONTENT));
     }
@@ -65,7 +64,7 @@ class CrawlerReporterTest {
     public void should_build_non_empty_report_to_string() {
         Map<Long, PriorityQueue<CrawledNode>> graph = buildGraph();
         String actualReport = underTest
-                .buildReport(new CrawlSiteResponse(SUB_DOMAIN, graph, 0, 0, 0.5), stringAppender)
+                .buildReport(new CrawlSiteResponse(SUB_DOMAIN, graph, 0, 0, 0L, 0.5, 0), stringAppender)
                 .get();
         Assertions.assertTrue(actualReport.contains(CrawlerReporter.SITE_MAP_HEADER));
         Assertions.assertTrue(actualReport.contains(SUB_DOMAIN));
@@ -77,7 +76,7 @@ class CrawlerReporterTest {
         Map<Long, PriorityQueue<CrawledNode>> graph = buildGraph();
         ConsoleAppender appender = new ConsoleAppender();
         Optional<String> textReport = underTest
-                .buildReport(new CrawlSiteResponse(SUB_DOMAIN, graph, 0, 0, 0.5), appender);
+                .buildReport(new CrawlSiteResponse(SUB_DOMAIN, graph, 0, 0, 0L, 0.5, 0), appender);
 
         Assertions.assertTrue(appender.textIfAvailable().isEmpty());
         Assertions.assertTrue(textReport.isEmpty());
@@ -88,8 +87,7 @@ class CrawlerReporterTest {
         Map<Long, PriorityQueue<CrawledNode>> graph = buildGraph();
         FileWriterAppender appender = new FileWriterAppender(SUB_DOMAIN, "identifier_001");
         Optional<String> reportResult = underTest
-                .buildReport(new CrawlSiteResponse(SUB_DOMAIN, graph, 0, 0, 0.5),
-                        appender);
+                .buildReport(new CrawlSiteResponse(SUB_DOMAIN, graph, 0, 0, 0L, 0.5, 8), appender);
 
 
         File reportFile = TestUtils.retrieveFileReportCreated(appender.getFileName());
@@ -102,6 +100,7 @@ class CrawlerReporterTest {
         Assertions.assertTrue(resultText.contains(CrawlerReporter.SITE_MAP_HEADER));
         Assertions.assertTrue(resultText.contains(SUB_DOMAIN));
         Assertions.assertTrue(resultText.contains("page.html"));
+        Assertions.assertTrue(resultText.contains("Concurrent Workers: 8"));
     }
 
     @Test
@@ -112,7 +111,7 @@ class CrawlerReporterTest {
         Mockito.doThrow(IOException.class)
                 .when(appenderMock).append(Mockito.anyString());
 
-        CrawlSiteResponse crawlResponse = new CrawlSiteResponse(SUB_DOMAIN, buildGraph(), 0, 0, 0.5);
+        CrawlSiteResponse crawlResponse = new CrawlSiteResponse(SUB_DOMAIN, buildGraph(), 0, 0, 0L, 0.5, 0);
         Optional<String> report = underTest.buildReport(crawlResponse, appenderMock);
 
         MatcherAssert.assertThat(report.isPresent(), Matchers.is(true));
@@ -121,7 +120,7 @@ class CrawlerReporterTest {
 
     @Test
     public void should_build_report_file() {
-        CrawlSiteResponse response = new CrawlSiteResponse("buildreportdomain.com", buildGraph(), 0, 0, 0.7);
+        CrawlSiteResponse response = new CrawlSiteResponse("buildreportdomain.com", buildGraph(), 0, 0, 0L, 0.7, 0);
 
         underTest.report(true, response, "identifier_001");
 
@@ -131,7 +130,7 @@ class CrawlerReporterTest {
     @Test
     public void should_no_build_report_file() {
         String site = "dontbuildreportdomain.com";
-        CrawlSiteResponse response = new CrawlSiteResponse(site, buildGraph(), 0, 0, 0.7);
+        CrawlSiteResponse response = new CrawlSiteResponse(site, buildGraph(), 0, 0, 0L, 0.7, 0);
 
         underTest.report(false, response, "useless_identifier");
 
@@ -140,7 +139,7 @@ class CrawlerReporterTest {
 
     @Test
     public void should_catch_and_log_exception() {
-        CrawlSiteResponse response = new CrawlSiteResponse(null, null, 0, 8, 0.6);
+        CrawlSiteResponse response = new CrawlSiteResponse(null, null, 0, 8, 0L, 0.6, 0);
 
         underTest.report(true, response, "my_identifier");
 

@@ -16,7 +16,7 @@ public class CrawlerReporter {
 
     private static final Logger logger = LoggerFactory.getLogger(CrawlerReporter.class);
     private static final PriorityQueue<CrawledNode> EMPTY_QUEUE = new PriorityQueue<>();
-    private static final String RESULTS_HEADER_TEMPLATE = "\n\n---- Results for [%s] ----\n";
+    private static final String RESULTS_HEADER_TEMPLATE = "%n%n---- Results for [%s] ----%n";
     static final String EMPTY_REPORT_CONTENT = "-- No Nodes Traversed --";
     static final String SITE_MAP_HEADER = "\n---------- Site Map ---------------\n";
 
@@ -35,15 +35,18 @@ public class CrawlerReporter {
 
                 int totalLinks = graph.values().stream().mapToInt(Collection::size).sum();
 
-                appender.append("\nTotal Pages crawled :").append("" + graph.keySet().size())
+                appender
+                        .append("\nTotal Concurrent Workers: ").append("" + siteResponse.getWorkerCount())
+                        .append("\nTotal Pages crawled: ").append("" + graph.keySet().size())
                         .append("\nTotal Links Discovered: ").append("" + totalLinks)
                         .append("\nTotal Links not downloadable due reporting failures: ").append("" + siteResponse.getTotalFailures())
+                        .append("\nTotal Links rejected after timeout: ").append("" + siteResponse.getRejections())
                         .append("\nTotal Links redirected: ").append("" + siteResponse.getTotalRedirects())
-                        .append(String.format("\nTotal time taken: %.3f seconds.\n", siteResponse.totalTime))
+                        .append(String.format("%nTotal time taken: %.3f seconds.%n", siteResponse.getTotalTime()))
                         .append(SITE_MAP_HEADER);
                 while (q.size() > 0) {
                     CrawledNode pop = q.pop();
-                    appender.append(String.format("%s%s\n", "---".repeat(pop.level), pop.url));
+                    appender.append(String.format("%s%s%n", "---".repeat(pop.level), pop.url));
                     PriorityQueue<CrawledNode> pq = graph.getOrDefault(pop.id, EMPTY_QUEUE);
                     while (pq.size() > 0) {
                         q.push(pq.remove());

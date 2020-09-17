@@ -140,4 +140,8 @@ public class TestUtils {
         }
         return directoryToDelete.delete();
     }
+
+    public static <T> CompletableFuture<HttpResponse<T>> getFutureResponse() {
+        return null;
+    }
 }

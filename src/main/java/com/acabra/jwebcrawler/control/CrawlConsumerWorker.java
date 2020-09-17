@@ -39,6 +39,10 @@ public class CrawlConsumerWorker implements Runnable {
     public void run() {
         try {
             while (true) {
+                if(coordinator.isJobDone()) {
+                    logger.info("Terminating as requested by coordinator...");
+                    return;
+                }
                 final CrawledNode node = queue.take();
                 if (node.id == CrawlerApp.POISON_PILL_ID) {
                     logger.info("drinking poison pill ...");
@@ -60,13 +64,29 @@ public class CrawlConsumerWorker implements Runnable {
         String resolvedUrl = coordinator.resolve(node.url);
         if (coordinator.allowLink(resolvedUrl)) {
             coordinator.processNode(node);
-            this.downloadService.download(resolvedUrl).thenAccept(httpResponse ->
-                new Thread(
-                    new CrawlProducerWorker(this.coordinator, this.config, this.queue, node, httpResponse)
-                ).start()).join();
+            if(attemptDownload(node.url)) {
+                this.downloadService.download(resolvedUrl)
+                    .thenAccept(httpResponse ->
+                       this.coordinator.dispatchProducer(
+                           new CrawlProducerWorker(this.coordinator, this.config, this.queue, node, httpResponse)
+                       )
+                    ).join();
+            }
+        } else {
+            coordinator.reportFailureLink(node.url);
         }
         if (this.config.sleepTime > 0) {
             Thread.sleep(this.config.sleepTime);
         }
+    }
+
+    /**
+     * This filter can be extended to support other types rendering html, can be part of a filter
+     * @param url url to check
+     * @return true if valid to download such content based on this url, false otherwise
+     */
+    private boolean attemptDownload(String url) {
+        //TODO implement more checks for files that want to be downloaded since can have html render content
+        return !url.endsWith(".pdf");
     }
 }

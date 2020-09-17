@@ -5,13 +5,17 @@ import com.acabra.jwebcrawler.model.CrawlerAppConfig;
 import com.acabra.jwebcrawler.service.DownloadService;
 import com.acabra.jwebcrawler.service.Downloader;
 import java.net.http.HttpResponse;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-
-import java.util.concurrent.*;
-import java.util.concurrent.locks.ReentrantLock;
 
 class CrawlConsumerWorkerTest {
 
@@ -48,7 +52,7 @@ class CrawlConsumerWorkerTest {
         Mockito.when(downloadServiceMock.download("http://throwexeptionsite.com/")).
                 thenThrow(new RuntimeException("failure on download service"));
         this.queue = new LinkedBlockingQueue<>();
-        this.coordinator = new CrawlerCoordinator();
+        this.coordinator = new CrawlerCoordinator(Executors.newSingleThreadExecutor());
     }
 
     @Test
@@ -75,9 +79,31 @@ class CrawlConsumerWorkerTest {
     }
 
     @Test
+    public void should_terminate_after_drinking_poison_pill_no_sleep_time() {
+        CrawlerAppConfig defaults = CrawlerAppConfigBuilder.newBuilder("http://mysite.com/")
+                .withMaxExecutionTime(0.25) //indicates the worker is stoppable
+                .build();
+
+        CrawlConsumerWorker underTest = new CrawlConsumerWorker(queue, coordinator, downloadServiceMock, defaults);
+
+        buildAndStartThread(() -> {
+            try {
+                Thread.sleep(10L);
+                queue.offer(CrawlerApp.POISON_PILL);
+            }
+            catch (InterruptedException ie) { System.out.println(ie.getMessage());}
+        });
+        CompletableFuture.runAsync(underTest, Executors.newSingleThreadExecutor()).join();
+
+        Mockito.verify(downloadServiceMock, Mockito.atMostOnce()).download(Mockito.anyString()); //warm up call
+
+        Assertions.assertFalse(underTest.isEndInterrupted());
+    }
+
+    @Test
     public void should_not_limit_request_download_no_site_limit() {
         CrawlerAppConfig defaults = CrawlerAppConfigBuilder.newBuilder("http://mysite.com/")
-                .withSleepWorkerTime(0.01)
+                .withSleepWorkerTime(0)
                 .withMaxTreeSiteHeight(0) //dont limit site depth
                 .build();
 
@@ -86,14 +112,14 @@ class CrawlConsumerWorkerTest {
 
         buildAndStartThread(()-> {
             try {
-                Thread.sleep(2000L);
+                Thread.sleep(3000L);
                 queue.offer(CrawlerApp.POISON_PILL);
             } catch (Exception e) { System.out.println(e.getMessage()); }
         });
 
         CompletableFuture.runAsync(underTest, Executors.newSingleThreadExecutor()).join();
 
-        Mockito.verify(downloadServiceMock, Mockito.times(7)).download(Mockito.anyString());
+        Mockito.verify(downloadServiceMock, Mockito.times(5)).download(Mockito.anyString());
 
         Assertions.assertTrue(queue.isEmpty());
         Assertions.assertFalse(underTest.isEndInterrupted());
@@ -111,14 +137,14 @@ class CrawlConsumerWorkerTest {
 
         buildAndStartThread(()-> {
             try {
-                Thread.sleep(1000L);
+                Thread.sleep(3000L);
                 queue.offer(CrawlerApp.POISON_PILL);
             } catch (Exception e) { System.out.println(e.getMessage()); }
         });
 
         CompletableFuture.runAsync(underTest, Executors.newSingleThreadExecutor()).join();
 
-        Mockito.verify(downloadServiceMock, Mockito.times(6)).download(Mockito.anyString());
+        Mockito.verify(downloadServiceMock, Mockito.times(5)).download(Mockito.anyString());
 
         Assertions.assertTrue(queue.isEmpty());
         Assertions.assertFalse(underTest.isEndInterrupted());
@@ -166,6 +192,14 @@ class CrawlConsumerWorkerTest {
                 .withSleepWorkerTime(0.01)
                 .withMaxExecutionTime(0.25) //indicates the worker is stoppable
                 .build();
+
+        buildAndStartThread(()-> {
+            try {
+                Thread.sleep(3000L);
+                queue.offer(CrawlerApp.POISON_PILL);
+            } catch (Exception e) { System.out.println(e.getMessage()); }
+        });
+
         queue.offer(new CrawledNode(defaults.startUri, 0L));
         CrawlConsumerWorker underTest = new CrawlConsumerWorker(queue, coordinator, downloadServiceMock, defaults);
 
@@ -185,11 +219,32 @@ class CrawlConsumerWorkerTest {
         queue.offer(new CrawledNode(defaults.startUri, 0L));
         CrawlConsumerWorker underTest = new CrawlConsumerWorker(queue, coordinator, downloadServiceMock, defaults);
 
-        CompletableFuture.runAsync(underTest, Executors.newSingleThreadExecutor()).join();
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        CompletableFuture.runAsync(underTest, executor).join();
+        executor.shutdown();
 
         Mockito.verify(downloadServiceMock, Mockito.times(1)).download(Mockito.anyString());
 
         Assertions.assertTrue(queue.isEmpty());
         Assertions.assertFalse(underTest.isEndInterrupted());
+    }
+
+    @Test
+    void should_stop_if_coordinator_requested() {
+        CrawlerAppConfig defaults = CrawlerAppConfigBuilder.newBuilder("http://mysite.com/")
+                .withSleepWorkerTime(0.01)
+                .withMaxTreeSiteHeight(1) //limit site height
+                .build();
+
+        queue.offer(new CrawledNode(defaults.startUri, 0L));
+        coordinator.requestJobDone();
+        CrawlConsumerWorker underTest = new CrawlConsumerWorker(queue, coordinator, downloadServiceMock, defaults);
+
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        CompletableFuture.runAsync(underTest, executor).join();
+        executor.shutdown();
+
+        MatcherAssert.assertThat(queue.size(), Matchers.is(1)); // job stop requested before taking from queue
+
     }
 }

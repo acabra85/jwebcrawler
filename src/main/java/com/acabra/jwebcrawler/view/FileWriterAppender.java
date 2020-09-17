@@ -4,14 +4,14 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-public class FileWriterAppender implements Appender {
+import edu.umd.cs.findbugs.annotations.*;
+
+public class FileWriterAppender implements Appender, AutoCloseable {
 
     private static final String FILE_NAME_TEMPLATE = "CrawlReport-%s-%s.txt"; // e.g. CrawlReport-www.sitename.com-<identifier>.txt
-    private static final Logger logger = LoggerFactory.getLogger(FileWriterAppender.class);
     private static final String SEPARATOR = System.getProperty("file.separator");
     private static final String REPORT_DEST_FOLDER = "reports";
 
@@ -21,7 +21,7 @@ public class FileWriterAppender implements Appender {
     public FileWriterAppender(String siteURI, String identifier) throws IOException {
         this.fileName = buildFileName(siteURI, identifier);
         String filePath = String.join(SEPARATOR, REPORT_DEST_FOLDER, fileName);
-        this.bw = new BufferedWriter(new FileWriter(filePath));
+        this.bw = new BufferedWriter(new FileWriter(filePath, StandardCharsets.UTF_8));
     }
 
     @Override
@@ -40,7 +40,8 @@ public class FileWriterAppender implements Appender {
         return Optional.empty();
     }
 
-
+    @SuppressFBWarnings(value ="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE",
+            justification="checking whether folder exists or not, not necessary to store return")
     private static String buildFileName(String domain, String identifier) {
         String siteName = buildFileNameFromURI(domain.contains("//") ? domain.split("//")[1] : domain);
         String filePath = String.format(FILE_NAME_TEMPLATE, siteName, identifier);

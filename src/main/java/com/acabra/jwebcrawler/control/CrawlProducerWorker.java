@@ -27,14 +27,14 @@ public class CrawlProducerWorker implements Runnable {
     private final CrawledNode node;
 
 
-    public CrawlProducerWorker(CrawlerCoordinator coordinator, CrawlerAppConfig config, BlockingQueue<CrawledNode> queue, CrawledNode node, HttpResponse<String> httpResponse) {
+    public CrawlProducerWorker(CrawlerCoordinator coordinator, CrawlerAppConfig config, BlockingQueue<CrawledNode> queue,
+                               CrawledNode node, HttpResponse<String> httpResponse) {
 
         this.coordinator = coordinator;
         this.config = config;
         this.queue = queue;
         this.httpResponse = httpResponse;
         this.node = node;
-        //logger.info("process: " + node.url);
     }
 
     private ProcessedResponse processHTTPResponse(CrawledNode node, HttpResponse<String> httpResponse) {
@@ -48,11 +48,11 @@ public class CrawlProducerWorker implements Runnable {
                 List<String> location = httpResponse.headers().map().get("Location");
                 if (location!= null && location.size() > 0) {
                     links = location;
-                    logger.info(String.format("[%s] permanently moved to [%s] call code: %d", uri, links.get(0), statusCode));
+                    //logger.info(String.format("[%s] permanently moved to [%s] call code: %d", uri, links.get(0), statusCode));
                 }
             } else {
                 coordinator.reportFailureLink(uri);
-                logger.info(String.format("Failed GET uri: [%s] call code: %d", uri, statusCode));
+                //logger.info(String.format("Failed GET uri: [%s] call code: %d", uri, statusCode));
             }
             return new ProcessedResponse(statusCode, links, true);
         } else {
@@ -90,14 +90,15 @@ public class CrawlProducerWorker implements Runnable {
         if (pResponse.success) {
             if (pResponse.statusCode == 200) {
                 pResponse.links.forEach(link ->
-                        enqueueIfAllowed(link, node.level + 1, node.buildChild(link, coordinator.getNextId())));
+                    attemptEnqueue(link, node.level + 1, node.buildChild(link, coordinator.getNextId()))
+                );
             } else if (pResponse.statusCode == 301 || pResponse.statusCode == 302) {
                 // requeue the page with the given redirection link
                 if (pResponse.links != null && pResponse.links.size() > 0) {
                     String newLocation = pResponse.links.get(0);
                     String redirectUri = newLocation.startsWith(this.config.siteURI) ? newLocation : this.config.siteURI + newLocation;
                     coordinator.reportRedirect(node.url, redirectUri);
-                    enqueueIfAllowed(redirectUri, node.level, node.redirection(redirectUri, coordinator.getNextId()));
+                    attemptEnqueue(redirectUri, node.level, node.redirection(redirectUri, coordinator.getNextId()));
                 }
             } else {
                 coordinator.reportFailureLink(node.url);
@@ -105,10 +106,14 @@ public class CrawlProducerWorker implements Runnable {
         }
     }
 
-    private void enqueueIfAllowed(String redirectUri, int level, CrawledNode redirection) {
-        if (allowEnqueue(level, redirectUri)) {
-            queue.offer(redirection);
+    private boolean attemptEnqueue(String redirectUri, int level, CrawledNode redirection) {
+        if (coordinator.isJobDone()) {
+            return false;
         }
+        if (allowEnqueue(level, redirectUri)) {
+            return queue.offer(redirection);
+        }
+        return false;
     }
 
     private boolean allowEnqueue(int level, String link) {
@@ -118,11 +123,15 @@ public class CrawlProducerWorker implements Runnable {
         return coordinator.allowLink(link);
     }
 
+    void process() {
+        ProcessedResponse processedResponse = processHTTPResponse(this.node, this.httpResponse);
+        enqueueLocalDomainLinksFound(node, processedResponse);
+    }
+
     @Override
     public void run() {
         try {
-            ProcessedResponse processedResponse = processHTTPResponse(this.node, this.httpResponse);
-            enqueueLocalDomainLinksFound(node, processedResponse);
+            process();
         } catch (Exception e) {
             logger.error(e.getMessage());
         }

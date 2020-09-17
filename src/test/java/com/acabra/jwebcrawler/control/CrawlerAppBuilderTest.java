@@ -211,6 +211,19 @@ public class CrawlerAppBuilderTest {
     }
 
     @Test
+    public void should_pass_and_limit_worker_count() {
+        CrawlerApp underTest = CrawlerApp.of("http://127.0.0.1:8000/", "10", "60", "5", "true", "0");
+        MatcherAssert.assertThat(underTest, Matchers.notNullValue());
+        MatcherAssert.assertThat(underTest.getConfig().workerCount, Matchers.is(50));
+        MatcherAssert.assertThat(underTest.getConfig().sleepTime, Matchers.is(5000L));
+        MatcherAssert.assertThat(underTest.getConfig().timeout, Matchers.is(10000L));
+        MatcherAssert.assertThat(underTest.getConfig().maxChildLinks, Matchers.is(0));
+        MatcherAssert.assertThat(underTest.getConfig().siteHeight, Matchers.is(6));
+        MatcherAssert.assertThat(underTest.getConfig().siteURI, Matchers.is("http://127.0.0.1:8000"));
+        MatcherAssert.assertThat(underTest.getConfig().reportToFile, Matchers.is(true));
+    }
+
+    @Test
     public void should_pass_valid_arguments_11_negative_node_children_and_site_height() {
         CrawlerApp underTest = CrawlerApp.of("http://127.0.0.1:8000/", "10", "4", "5", "true", "-200", "-20");
         MatcherAssert.assertThat(underTest, Matchers.notNullValue());
