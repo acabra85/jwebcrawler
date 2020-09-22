@@ -20,7 +20,7 @@ Download the source code and execute the following command inside the **root fol
 ```./mvnw clean install; java -jar target/jwebcrawler-1.0-SNAPSHOT.jar http://localhost:8000```
 ## Output
 
-For the above command with a server localhost in port 8000, serving the folder /site. will show the following
+For the above command with a server localhost in port 8000, serving the folder src/test/resources/site. will show the following
 ```
 ---- Results for [http://localhost:8000] ----
 
