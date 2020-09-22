@@ -22,22 +22,30 @@ Download the source code and execute the following command inside the **root fol
 
 For the above command with a server localhost in port 8000, serving the folder /site. will show the following
 ```
----- Site Map [http://localhost:8000] ----
+---- Results for [http://localhost:8000] ----
 
-http://localhost:8000
+Total Concurrent Workers: 1
+Total Pages crawled: 8
+Total Links Discovered: 11
+Total Links not downloadable due reporting failures: 3
+Total Links rejected after timeout: 0
+Total Links redirected: 0
+Total time taken: 30.993 seconds.
+
+---------- Site Map ---------------
+http://localhost:8000/
 ---http://localhost:8000/a2.html
 ------http://localhost:8000/a5.html
 ------http://localhost:8000/index.html
 ---http://localhost:8000/a3.html
 ------http://localhost:8000/a6.html
-------http://localhost:8000/index.html
+---------http://localhost:8000/a6redirect.html
 ---http://localhost:8000/a4.html
 ------http://localhost:8000/a7.html
 ---------http://localhost:8000/a8.html
 ------------http://localhost:8000/a9.html
-------http://localhost:8000/index.html
 
--------------------------
+-----------------------------------
 ```
 Where the amount of dashes indicates the hierarchy as how the site was traversed starting from the root <SUB_DOMAIN> in 
 this case http://localhost:8000.
